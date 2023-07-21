@@ -27,6 +27,8 @@ classifiers = [
 dependencies = [
   "awkward",
   "click",
+  "PyGithub",
+  "requests",
   "uproot",
 ]
 dynamic = ["version"]
@@ -37,7 +39,8 @@ Issues = "https://github.com/eic/epic-capybara/issues"
 Source = "https://github.com/eic/epic-capybara"
 
 [project.scripts]
-capybara = "epic_capybara.__main__:main"
+capybara = "epic_capybara.cli:capybara"
+capy = "epic_capybara.cli:capy"
 
 [tool.hatch.version]
 path = "epic_capybara/__about__.py"
