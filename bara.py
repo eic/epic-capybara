@@ -38,7 +38,6 @@ for f in files:
 t1 = ts[files[0]]
 t2 = ts[files[1]]
 for b in sorted(names):
-    if "Clust" in b: continue
     if b == "PARAMETERS": continue
     #print("b:", b)
     b1 = t1[b]
