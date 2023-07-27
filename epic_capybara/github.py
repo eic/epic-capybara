@@ -10,7 +10,7 @@ def download_artifact(workflow, artifact_name, token=None, click=None):
     if not artifacts:
         if click is not None:
             click.secho(f"Can not obtain {artifact_name}", fg="red", err=True)
-            if workflow.get_artifacts():
+            if workflow.get_artifacts().totalCount:
                 click.secho(f"Available artifacts:", fg="red", err=True)
                 for artifact in workflow.get_artifacts():
                     click.echo(artifact.name)
