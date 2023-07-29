@@ -9,18 +9,16 @@ from pprint import pprint
 files = sys.argv[1:]
 
 ts = {}
-prev_names = None
+names = []
 for f in files:
     print(f)
     ts[f] = uproot.open(f)["events"]
-    names = set([b.name for b in ts[f].branches])
+    names.append(set([b.name for b in ts[f].branches]))
 
-    if prev_names is not None:
-        print(deepdiff.DeepDiff(prev_names, names))
+    if len(names) > 1:
+        print(deepdiff.DeepDiff(names[-2], names[-1]))
 
-    prev_names = names
-
-#for b in sorted(names):
+#for b in sorted(set.intersection(*names)):
 #    for l in [b.name for b in ts[f][b].branches]:
 #        print(b, l)
 #        #for f in files:
@@ -37,7 +35,7 @@ for f in files:
 
 t1 = ts[files[0]]
 t2 = ts[files[1]]
-for b in sorted(names):
+for b in sorted(set.intersection(*names)):
     if b == "PARAMETERS": continue
     #print("b:", b)
     b1 = t1[b]
