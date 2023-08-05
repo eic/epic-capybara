@@ -34,6 +34,7 @@ def capy(ctx: click.Context, artifact_name: str, owner: str, pr_number: int, rep
 
     workflow_head = None
     workflow_base = None
+    messages = []
 
     with click.progressbar(
             repo.get_workflow_runs(),
@@ -44,11 +45,20 @@ def capy(ctx: click.Context, artifact_name: str, owner: str, pr_number: int, rep
             # workflow.head_commit.sha is not available, so we take the latest
             # TODO check if PR is the latest by parsing log files?
             if workflow.head_branch == pr.head.ref and workflow_head is None:
+                if workflow.get_artifacts().totalCount == 0:
+                    messages.append(dict(message=f"Skipping workflow {workflow.html_url} on {workflow.head_branch} with no artifacts", fg="red", err=True))
+                    continue
                 workflow_head = workflow
             if workflow.head_branch == pr.base.ref and workflow_base is None:
+                if workflow.get_artifacts().totalCount == 0:
+                    messages.append(dict(message=f"Skipping workflow {workflow.html_url} on {workflow.head_branch} with no artifacts", fg="red", err=True))
+                    continue
                 workflow_base = workflow
             if workflow_head is not None and workflow_base is not None:
                 break
+
+    for message in messages:
+        click.secho(**message)
 
     click.echo(f"PR base workflow: {workflow_base.html_url}")
     click.echo(f"PR head workflow: {workflow_head.html_url}")
