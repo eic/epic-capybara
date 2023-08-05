@@ -43,9 +43,9 @@ def capy(ctx: click.Context, artifact_name: str, owner: str, pr_number: int, rep
         for workflow in workflows_bar:
             # workflow.head_commit.sha is not available, so we take the latest
             # TODO check if PR is the latest by parsing log files?
-            if workflow.head_branch == pr.head.ref:
+            if workflow.head_branch == pr.head.ref and workflow_head is None:
                 workflow_head = workflow
-            if workflow.head_branch == pr.base.ref:
+            if workflow.head_branch == pr.base.ref and workflow_base is None:
                 workflow_base = workflow
             if workflow_head is not None and workflow_base is not None:
                 break
