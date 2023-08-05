@@ -1,8 +1,8 @@
 import click
-import requests
 from github import Auth, Github, GithubException
 
 from ..github import download_artifact
+
 
 @click.command()
 @click.option('--token', default=None, help="GitHub access token (defaults to GITHUB_TOKEN environment variable)")
@@ -17,7 +17,7 @@ def capy(ctx: click.Context, artifact_name: str, owner: str, pr_number: int, rep
         if "GITHUB_TOKEN" in os.environ:
             token = os.environ["GITHUB_TOKEN"]
         else:
-            click.secho(f"Need to provide a --token parameter or set GITHUB_TOKEN environment variable", fg='red', err=True)
+            click.secho("Need to provide a --token parameter or set GITHUB_TOKEN environment variable", fg='red', err=True)
             ctx.exit(1)
     gh = Github(auth=Auth.Token(token))
     repo = gh.get_user(owner).get_repo(repo)
