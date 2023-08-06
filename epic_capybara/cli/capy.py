@@ -5,20 +5,13 @@ from ..github import download_artifact
 
 
 @click.command()
-@click.option('--token', default=None, help="GitHub access token (defaults to GITHUB_TOKEN environment variable)")
+@click.option('--token', envvar="GITHUB_TOKEN", required=True, help="GitHub access token (defaults to GITHUB_TOKEN environment variable)")
 @click.option('--owner', default="eic", help="Owner of the target repository")
 @click.option('--repo', default="EICrecon", help="Name of the target repository")
 @click.option('--artifact-name', default="rec_dis_18x275_minQ2=1000_brycecanyon.edm4eic.root")
 @click.argument('pr_number', type=int)
 @click.pass_context
 def capy(ctx: click.Context, artifact_name: str, owner: str, pr_number: int, repo: str, token: str):
-    if token is None:
-        import os
-        if "GITHUB_TOKEN" in os.environ:
-            token = os.environ["GITHUB_TOKEN"]
-        else:
-            click.secho("Need to provide a --token parameter or set GITHUB_TOKEN environment variable", fg='red', err=True)
-            ctx.exit(1)
     gh = Github(auth=Auth.Token(token))
     repo = gh.get_user(owner).get_repo(repo)
 
