@@ -29,10 +29,16 @@ def capy(ctx: click.Context, artifact_name: str, owner: str, pr_number: int, rep
     workflow_base = None
     messages = []
 
+    def item_show_func(workflow):
+       workflow_id = str(workflow.id) if hasattr(workflow, "id") else "?"
+       head_found = "no" if workflow_head is None else "yes"
+       base_found = "no" if workflow_base is None else "yes"
+       return f"{workflow_id} head:{head_found} base:{base_found}"
+
     with click.progressbar(
             repo.get_workflow_runs(),
             label="Loading workflows",
-            item_show_func=lambda workflow: str(workflow.id) if hasattr(workflow, "id") else None,
+            item_show_func=item_show_func,
     ) as workflows_bar:
         for workflow in workflows_bar:
             # workflow.head_commit.sha is not available, so we take the latest
@@ -49,6 +55,13 @@ def capy(ctx: click.Context, artifact_name: str, owner: str, pr_number: int, rep
                 workflow_base = workflow
             if workflow_head is not None and workflow_base is not None:
                 break
+
+    if workflow_head is None:
+        click.secho("No completed workflow found for head branch", fg="red")
+        ctx.exit(1)
+    if workflow_base is None:
+        click.secho("No completed workflow found for base branch", fg="red")
+        ctx.exit(1)
 
     for message in messages:
         click.secho(**message)
