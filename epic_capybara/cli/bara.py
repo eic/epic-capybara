@@ -2,7 +2,11 @@ import re
 
 import awkward as ak
 import click
+import numpy as np
 import uproot
+from bokeh.layouts import gridplot
+from bokeh.models import TabPanel, Tabs
+from bokeh.plotting import figure, show
 from hist import Hist
 
 
@@ -46,6 +50,8 @@ def bara(files, match, unmatch):
         for key in keys:
             arr.setdefault(key, {})[_file] = tree[key].array()
 
+    collection_figs = {}
+
     for key in keys:
         xmin = min(filter(
             lambda v: v is not None,
@@ -73,6 +79,9 @@ def bara(files, match, unmatch):
                          != ak.num(file_arr_ref, axis=1))
                or ak.any(ak.nan_to_none(file_arr)
                          != ak.nan_to_none(file_arr_ref))):
+                fig = figure(x_axis_label=key, y_axis_label="Entries")
+                collection_figs.setdefault(key.split("/")[0], []).append(fig)
+
                 print(key)
                 h = (
                     Hist.new
@@ -80,6 +89,9 @@ def bara(files, match, unmatch):
                     .Int64()
                 )
                 h.fill(x=ak.flatten(file_arr_ref))
+
+                ys, edges = h.to_numpy()
+                fig.step(edges, np.concatenate([ys, [ys[-1]]]), mode="after", legend_label="Reference", line_width=2, line_color="green")
 
                 print("\t", file_ref.name)
                 print(h)
@@ -91,8 +103,16 @@ def bara(files, match, unmatch):
                 )
                 h.fill(x=ak.flatten(file_arr))
 
+                ys, edges = h.to_numpy()
+                fig.step(edges, np.concatenate([ys, [ys[-1]]]), mode="after", legend_label="New", line_color="red")
+
                 print("\t", _file.name)
                 print(h)
 
                 print(file_arr, file_arr_ref)
             file_arr_ref = file_arr
+
+    show(Tabs(tabs=[
+        TabPanel(child=gridplot(figs, ncols=3, width=400, height=300), title=f"{collection_name}")
+        for collection_name, figs in collection_figs.items()
+    ]))
