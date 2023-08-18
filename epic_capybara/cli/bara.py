@@ -6,7 +6,7 @@ import numpy as np
 import uproot
 from bokeh.layouts import gridplot
 from bokeh.models import TabPanel, Tabs
-from bokeh.plotting import figure, show
+from bokeh.plotting import figure, output_file, save
 from hist import Hist
 
 
@@ -112,7 +112,33 @@ def bara(files, match, unmatch):
                 print(file_arr, file_arr_ref)
             file_arr_ref = file_arr
 
-    show(Tabs(tabs=[
-        TabPanel(child=gridplot(figs, ncols=3, width=400, height=300), title=f"{collection_name}")
-        for collection_name, figs in collection_figs.items()
-    ]))
+    def to_filename(branch_name):
+        return branch_name.replace("#", "__pound__")
+    menu = []
+    for collection_name, figs in collection_figs.items():
+        menu.append((collection_name, to_filename(collection_name)))
+
+    from bokeh.models import CustomJS, Dropdown
+    def mk_dropdown(label="Select branch"):
+        dropdown = Dropdown(label=label, menu=menu, width=350, button_type="primary")
+        dropdown.js_on_event("menu_item_click", CustomJS(code="""
+          console.log('dropdown: ' + this.item, this.toString())
+          fetch(this.item + '.json')
+            .then(function(response) { return response.json(); })
+            .then(function(item) { Bokeh.documents[0].replace_with_json(item.doc); })
+        """))
+        return dropdown
+
+    from bokeh.layouts import column
+    from bokeh.embed import json_item
+    import json
+    for collection_name, figs in collection_figs.items():
+        item = column(
+          mk_dropdown(collection_name),
+          gridplot(figs, ncols=3, width=400, height=300),
+        )
+        with open(f"capybara-reports/{to_filename(collection_name)}.json", "w") as fp:
+            json.dump(json_item(item), fp)
+
+    output_file(filename="capybara-reports/index.html", title="ePIC capybara report")
+    save(mk_dropdown())
