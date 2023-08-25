@@ -1,0 +1,17 @@
+name: "Test capybara installation"
+
+on:
+  push:
+  pull_request:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v3
+      - name: Build and install epic-capybara
+        run: |
+          pip install hatch
+          hatch build
+          pip install dist/*.whl
