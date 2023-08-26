@@ -23,7 +23,10 @@ def capy(ctx: click.Context, artifact_name: str, owner: str, pr_number: int, rep
         click.secho(e)
         ctx.exit(1)
     click.echo(f"Title: {pr.title}", err=True)
-    click.echo(f"PR head: {click.style(pr.head.ref, bold=True)}@{pr.head.sha}, targets {click.style(pr.base.ref, bold=True)}@{pr.base.sha}", err=True)
+    other_repo_message = ""
+    if pr.head.repo != repo:
+       other_repo_message = click.style(f"{pr.head.repo.owner.login}/{pr.head.repo.name}", italic=True) + "/"
+    click.echo(f"PR head: {other_repo_message}{click.style(pr.head.ref, bold=True)}@{pr.head.sha}, targets {click.style(pr.base.ref, bold=True)}@{pr.base.sha}", err=True)
 
     workflow_head = None
     workflow_base = None
@@ -43,12 +46,12 @@ def capy(ctx: click.Context, artifact_name: str, owner: str, pr_number: int, rep
         for workflow in workflows_bar:
             # workflow.head_commit.sha is not available, so we take the latest
             # TODO check if PR is the latest by parsing log files?
-            if workflow.head_branch == pr.head.ref and workflow_head is None:
+            if workflow.head_repository == pr.head.repo and workflow.head_branch == pr.head.ref and workflow_head is None:
                 if workflow.get_artifacts().totalCount == 0:
                     messages.append(dict(message=f"Skipping workflow {workflow.html_url} on {workflow.head_branch} with no artifacts", fg="red", err=True))
                     continue
                 workflow_head = workflow
-            if workflow.head_branch == pr.base.ref and workflow_base is None:
+            if workflow.head_repository == repo and workflow.head_branch == pr.base.ref and workflow_base is None:
                 if workflow.get_artifacts().totalCount == 0:
                     messages.append(dict(message=f"Skipping workflow {workflow.html_url} on {workflow.head_branch} with no artifacts", fg="red", err=True))
                     continue
