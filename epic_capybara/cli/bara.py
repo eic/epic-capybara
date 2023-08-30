@@ -52,7 +52,7 @@ def bara(files, match, unmatch):
 
     collection_figs = {}
 
-    for key in keys:
+    for key in sorted(arr.keys()):
         xmin = min(filter(
             lambda v: v is not None,
             map(ak.min, arr[key].values())
@@ -71,46 +71,20 @@ def bara(files, match, unmatch):
            or any("* int" in str(ak.type(a)) for a in arr[key].values())):
             nbins = int(min(100, np.ceil(xmax - xmin)))
 
-        it = iter(arr[key].items())
-        file_ref, file_arr_ref = next(it)
-        for _file, file_arr in it:
-            if ((ak.num(file_arr, axis=0) != ak.num(file_arr_ref, axis=0))
-               or ak.any(ak.num(file_arr, axis=1)
-                         != ak.num(file_arr_ref, axis=1))
-               or ak.any(ak.nan_to_none(file_arr)
-                         != ak.nan_to_none(file_arr_ref))):
-                fig = figure(x_axis_label=key, y_axis_label="Entries")
-                collection_figs.setdefault(key.split("/")[0], []).append(fig)
+        fig = figure(x_axis_label=key.split("/", 1)[1], y_axis_label="Entries")
+        collection_figs.setdefault(key.split("/")[0], []).append(fig)
 
-                print(key)
-                h = (
-                    Hist.new
-                    .Reg(nbins, xmin, xmax, name="x", label=key)
-                    .Int64()
-                )
-                h.fill(x=ak.flatten(file_arr_ref))
+        prev_file_arr = None
+        for (_file, file_arr), color, line_width in zip(arr[key].items(), ["green", "red"], [3, 2]):
+            h = (
+                Hist.new
+                .Reg(nbins, xmin, xmax, name="x", label=key)
+                .Int64()
+            )
+            h.fill(x=ak.flatten(file_arr))
 
-                ys, edges = h.to_numpy()
-                fig.step(edges, np.concatenate([ys, [ys[-1]]]), mode="after", legend_label="Reference", line_width=2, line_color="green")
-
-                print("\t", file_ref.name)
-                print(h)
-
-                h = (
-                    Hist.new
-                    .Reg(nbins, xmin, xmax, name="x", label=key)
-                    .Int64()
-                )
-                h.fill(x=ak.flatten(file_arr))
-
-                ys, edges = h.to_numpy()
-                fig.step(edges, np.concatenate([ys, [ys[-1]]]), mode="after", legend_label="New", line_color="red")
-
-                print("\t", _file.name)
-                print(h)
-
-                print(file_arr, file_arr_ref)
-            file_arr_ref = file_arr
+            ys, edges = h.to_numpy()
+            fig.step(edges, np.concatenate([ys, [ys[-1]]]), mode="after", legend_label=_file.name, line_color=color, line_width=line_width)
 
     def to_filename(branch_name):
         return branch_name.replace("#", "__pound__")
