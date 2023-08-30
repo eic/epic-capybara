@@ -67,8 +67,8 @@ def bara(files, match, unmatch):
         xmax += 1
 
         nbins = 10
-        if ("* uint" in str(ak.type(arr[key][_file]))
-           or "* int" in str(ak.type(arr[key][_file]))):
+        if (any("* uint" in str(ak.type(a)) for a in arr[key].values())
+           or any("* int" in str(ak.type(a)) for a in arr[key].values())):
             nbins = int(min(100, np.ceil(xmax - xmin)))
 
         it = iter(arr[key].items())
