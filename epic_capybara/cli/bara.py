@@ -51,6 +51,7 @@ def bara(files, match, unmatch):
             arr.setdefault(key, {})[_file] = tree[key].array()
 
     collection_figs = {}
+    collection_with_diffs = set()
 
     for key in sorted(arr.keys()):
         xmin = min(filter(
@@ -86,11 +87,27 @@ def bara(files, match, unmatch):
             ys, edges = h.to_numpy()
             fig.step(edges, np.concatenate([ys, [ys[-1]]]), mode="after", legend_label=_file.name, line_color=color, line_width=line_width)
 
+            if prev_file_arr is not None:
+                if ((ak.num(file_arr, axis=0) != ak.num(prev_file_arr, axis=0))
+                   or ak.any(ak.num(file_arr, axis=1)
+                             != ak.num(prev_file_arr, axis=1))
+                   or ak.any(ak.nan_to_none(file_arr)
+                             != ak.nan_to_none(prev_file_arr))):
+                    print(key)
+                    print(prev_file_arr, file_arr)
+                    collection_with_diffs.add(key.split("/")[0])
+            prev_file_arr = file_arr
+
     def to_filename(branch_name):
         return branch_name.replace("#", "__pound__")
     menu = []
     for collection_name, figs in collection_figs.items():
-        menu.append((collection_name, to_filename(collection_name)))
+        if collection_name in collection_with_diffs:
+            menu.append((collection_name + " (*)", to_filename(collection_name)))
+    menu.append(None)
+    for collection_name, figs in collection_figs.items():
+        if collection_name not in collection_with_diffs:
+            menu.append((collection_name, to_filename(collection_name)))
 
     from bokeh.models import CustomJS, Dropdown
     def mk_dropdown(label="Select branch"):
