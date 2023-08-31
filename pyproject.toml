@@ -44,6 +44,7 @@ Source = "https://github.com/eic/epic-capybara"
 capybara = "epic_capybara.cli:capybara"
 capy = "epic_capybara.cli:capy"
 bara = "epic_capybara.cli:bara"
+cate = "epic_capybara.cli:cate"
 
 [tool.hatch.version]
 path = "epic_capybara/__about__.py"
