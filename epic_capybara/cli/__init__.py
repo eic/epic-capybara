@@ -6,6 +6,7 @@ import click
 from ..__about__ import __version__
 from .capy import capy
 from .bara import bara
+from .cate import cate
 
 @click.group(context_settings={'help_option_names': ['-h', '--help']}, invoke_without_command=False)
 @click.version_option(version=__version__, prog_name='capybara')
