@@ -5,7 +5,6 @@ import click
 import numpy as np
 import uproot
 from bokeh.layouts import gridplot
-from bokeh.models import TabPanel, Tabs
 from bokeh.plotting import figure, output_file, save
 from hist import Hist
 
