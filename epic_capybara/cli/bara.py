@@ -55,11 +55,11 @@ def bara(files, match, unmatch):
     for key in sorted(arr.keys()):
         xmin = min(filter(
             lambda v: v is not None,
-            map(ak.min, arr[key].values())
+            map(lambda a: ak.min(ak.mask(a, np.isfinite(a))), arr[key].values())
         ), default=None)
         xmax = max(filter(
             lambda v: v is not None,
-            map(ak.max, arr[key].values())
+            map(lambda a: ak.max(ak.mask(a, np.isfinite(a))), arr[key].values())
         ), default=None)
 
         if xmin is None:
