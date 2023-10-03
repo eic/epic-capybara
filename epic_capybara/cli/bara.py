@@ -34,7 +34,12 @@ def match_filter(key, match, unmatch):
     "-M", "--unmatch", multiple=True,
     help="Exclude collections with names matching a regex"
 )
-def bara(files, match, unmatch):
+@click.option(
+    "--serve", is_flag=True,
+    default=False,
+    help="Run a local HTTP server to view the report"
+)
+def bara(files, match, unmatch, serve):
     arr = {}
 
     match = list(map(re.compile, match))
@@ -145,3 +150,15 @@ def bara(files, match, unmatch):
     """))
     output_file(filename="capybara-reports/index.html", title="ePIC capybara report")
     save(mk_dropdown())
+
+    if serve:
+        import os
+        os.chdir("capybara-reports/")
+        from http.server import SimpleHTTPRequestHandler
+        from socketserver import TCPServer
+        with TCPServer(("127.0.0.1", 24535), SimpleHTTPRequestHandler) as httpd:
+            print("Serving report at http://127.0.0.1:24535")
+            try:
+                httpd.serve_forever()
+            except KeyboardInterrupt:
+                pass
