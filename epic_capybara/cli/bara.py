@@ -4,6 +4,8 @@ import awkward as ak
 import click
 import numpy as np
 import uproot
+from bokeh.events import DocumentReady
+from bokeh.io import curdoc
 from bokeh.layouts import gridplot
 from bokeh.plotting import figure, output_file, save
 from hist import Hist
@@ -113,6 +115,7 @@ def bara(files, match, unmatch):
         dropdown = Dropdown(label=label, menu=menu, width=350, button_type="primary")
         dropdown.js_on_event("menu_item_click", CustomJS(code="""
           console.log('dropdown: ' + this.item, this.toString())
+          window.location.hash = "#" + this.item;
           fetch(this.item + '.json')
             .then(function(response) { return response.json(); })
             .then(function(item) { Bokeh.documents[0].replace_with_json(item.doc); })
@@ -127,8 +130,18 @@ def bara(files, match, unmatch):
           mk_dropdown(collection_name),
           gridplot(figs, ncols=3, width=400, height=300),
         )
+
         with open(f"capybara-reports/{to_filename(collection_name)}.json", "w") as fp:
             json.dump(json_item(item), fp)
 
+    curdoc().js_on_event(DocumentReady, CustomJS(code="""
+      var location = window.location.hash.replace(/^#/, "");
+      if ((location != "") && ((typeof current_location === 'undefined') || (current_location != location))) {
+        fetch(location + '.json')
+            .then(function(response) { return response.json(); })
+            .then(function(item) { Bokeh.documents[0].replace_with_json(item.doc); })
+        window.current_location = location;
+      }
+    """))
     output_file(filename="capybara-reports/index.html", title="ePIC capybara report")
     save(mk_dropdown())
