@@ -77,7 +77,6 @@ def bara(files, match, unmatch, serve):
         if (any("* uint" in str(ak.type(a)) for a in arr[key].values())
            or any("* int" in str(ak.type(a)) for a in arr[key].values())):
             nbins = int(min(100, np.ceil(x_range)))
-        print(nbins, x_min, xmax)
 
         fig = figure(x_axis_label=key.split("/", 1)[1], y_axis_label="Entries")
         collection_figs.setdefault(key.split("/")[0], []).append(fig)
