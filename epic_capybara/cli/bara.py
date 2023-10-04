@@ -60,23 +60,24 @@ def bara(files, match, unmatch, serve):
     collection_with_diffs = set()
 
     for key in sorted(arr.keys()):
-        xmin = min(filter(
+        x_min = min(filter(
             lambda v: v is not None,
             map(lambda a: ak.min(ak.mask(a, np.isfinite(a))), arr[key].values())
         ), default=None)
-        xmax = max(filter(
-            lambda v: v is not None,
-            map(lambda a: ak.max(ak.mask(a, np.isfinite(a))), arr[key].values())
-        ), default=None)
-
-        if xmin is None:
+        if x_min is None:
             continue
-        xmax += 1
+        x_range = max(filter(
+            lambda v: v is not None,
+            map(lambda a: ak.max(ak.mask(a - x_min, np.isfinite(a))), arr[key].values())
+        ), default=None) + 1
+
+        xmax = x_min + x_range
 
         nbins = 10
         if (any("* uint" in str(ak.type(a)) for a in arr[key].values())
            or any("* int" in str(ak.type(a)) for a in arr[key].values())):
-            nbins = int(min(100, np.ceil(xmax - xmin)))
+            nbins = int(min(100, np.ceil(x_range)))
+        print(nbins, x_min, xmax)
 
         fig = figure(x_axis_label=key.split("/", 1)[1], y_axis_label="Entries")
         collection_figs.setdefault(key.split("/")[0], []).append(fig)
@@ -85,13 +86,13 @@ def bara(files, match, unmatch, serve):
         for (_file, file_arr), color, line_width in zip(arr[key].items(), ["green", "red"], [3, 2]):
             h = (
                 Hist.new
-                .Reg(nbins, xmin, xmax, name="x", label=key)
+                .Reg(nbins, 0, x_range, name="x", label=key)
                 .Int64()
             )
-            h.fill(x=ak.flatten(file_arr))
+            h.fill(x=ak.flatten(file_arr - x_min))
 
             ys, edges = h.to_numpy()
-            fig.step(edges, np.concatenate([ys, [ys[-1]]]), mode="after", legend_label=_file.name, line_color=color, line_width=line_width)
+            fig.step(edges + x_min, np.concatenate([ys, [ys[-1]]]), mode="after", legend_label=_file.name, line_color=color, line_width=line_width)
 
             if prev_file_arr is not None:
                 if ((ak.num(file_arr, axis=0) != ak.num(prev_file_arr, axis=0))
