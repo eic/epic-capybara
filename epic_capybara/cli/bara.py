@@ -82,7 +82,11 @@ def bara(files, match, unmatch, serve):
         collection_figs.setdefault(key.split("/")[0], []).append(fig)
 
         prev_file_arr = None
-        for (_file, file_arr), color, line_width in zip(arr[key].items(), ["green", "red"], [3, 2]):
+        vis_params = [
+          ("green", 1.5, "solid"),
+          ("red", 3, "dashed"),
+        ]
+        for (_file, file_arr), (color, line_width, line_dash) in zip(arr[key].items(), vis_params):
             h = (
                 Hist.new
                 .Reg(nbins, 0, x_range, name="x", label=key)
@@ -91,7 +95,14 @@ def bara(files, match, unmatch, serve):
             h.fill(x=ak.flatten(file_arr - x_min))
 
             ys, edges = h.to_numpy()
-            fig.step(edges + x_min, np.concatenate([ys, [ys[-1]]]), mode="after", legend_label=_file.name, line_color=color, line_width=line_width)
+            fig.step(
+                edges + x_min, np.concatenate([ys, [ys[-1]]]),
+                mode="after",
+                legend_label=_file.name,
+                line_color=color,
+                line_width=line_width,
+                line_dash=line_dash,
+            )
 
             if prev_file_arr is not None:
                 if ((ak.num(file_arr, axis=0) != ak.num(prev_file_arr, axis=0))
