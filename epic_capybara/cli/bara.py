@@ -10,6 +10,8 @@ from bokeh.layouts import gridplot
 from bokeh.plotting import figure, output_file, save
 from hist import Hist
 
+from ..util import skip_common_prefix
+
 
 def match_filter(key, match, unmatch):
     accept = True
@@ -86,7 +88,10 @@ def bara(files, match, unmatch, serve):
           ("green", 1.5, "solid"),
           ("red", 3, "dashed"),
         ]
-        for (_file, file_arr), (color, line_width, line_dash) in zip(arr[key].items(), vis_params):
+        labels = skip_common_prefix([_file.name.split("/") for _file in arr[key].keys()])
+        labels = ["/".join(it) for it in labels]
+
+        for (_file, file_arr), label, (color, line_width, line_dash) in zip(arr[key].items(), labels, vis_params):
             h = (
                 Hist.new
                 .Reg(nbins, 0, x_range, name="x", label=key)
@@ -98,7 +103,7 @@ def bara(files, match, unmatch, serve):
             fig.step(
                 edges + x_min, np.concatenate([ys, [ys[-1]]]),
                 mode="after",
-                legend_label=_file.name,
+                legend_label=label,
                 line_color=color,
                 line_width=line_width,
                 line_dash=line_dash,
