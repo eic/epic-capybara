@@ -87,6 +87,7 @@ def bara(files, match, unmatch, serve):
         vis_params = [
           ("green", 1.5, "solid"),
           ("red", 3, "dashed"),
+          ("blue", 2, "dotted"),
         ]
         labels = skip_common_prefix([_file.name.split("/") for _file in arr[key].keys()])
         labels = ["/".join(it) for it in labels]
