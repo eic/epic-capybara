@@ -90,8 +90,9 @@ def bara(files, match, unmatch, serve):
           ("red", 3, "dashed"),
           ("blue", 2, "dotted"),
         ]
-        labels = skip_common_prefix([_file.name.split("/") for _file in arr[key].keys()])
-        labels = ["/".join(it) for it in labels]
+        paths = skip_common_prefix([_file.name.split("/") for _file in arr[key].keys()])
+        paths = skip_common_prefix([reversed(list(path)) for path in paths])
+        labels = ["/".join(reversed(list(reversed_path))) for reversed_path in paths]
 
         for (_file, file_arr), label, (color, line_width, line_dash) in zip(arr[key].items(), labels, vis_params):
             h = (
