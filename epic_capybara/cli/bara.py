@@ -9,6 +9,7 @@ from bokeh.io import curdoc
 from bokeh.layouts import gridplot
 from bokeh.plotting import figure, output_file, save
 from hist import Hist
+from scipy.stats import kstest
 
 from ..util import skip_common_prefix
 
@@ -116,8 +117,12 @@ def bara(files, match, unmatch, serve):
                              != ak.num(prev_file_arr, axis=1))
                    or ak.any(ak.nan_to_none(file_arr)
                              != ak.nan_to_none(prev_file_arr))):
+                    pvalue = kstest(
+                            ak.to_numpy(ak.flatten(file_arr)),
+                            ak.to_numpy(ak.flatten(prev_file_arr))
+                        ).pvalue
                     print(key)
-                    print(prev_file_arr, file_arr)
+                    print(prev_file_arr, file_arr, f"p = {pvalue:.3f}")
                     collection_with_diffs.add(key.split("/")[0])
             prev_file_arr = file_arr
 
