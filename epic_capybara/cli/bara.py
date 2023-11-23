@@ -117,10 +117,13 @@ def bara(files, match, unmatch, serve):
                              != ak.num(prev_file_arr, axis=1))
                    or ak.any(ak.nan_to_none(file_arr)
                              != ak.nan_to_none(prev_file_arr))):
-                    pvalue = kstest(
-                            ak.to_numpy(ak.flatten(file_arr)),
-                            ak.to_numpy(ak.flatten(prev_file_arr))
-                        ).pvalue
+                    if ak.num(file_arr, axis=0) > 0 and ak.num(prev_file_arr, axis=0) > 0:
+                        pvalue = kstest(
+                                ak.to_numpy(ak.flatten(file_arr)),
+                                ak.to_numpy(ak.flatten(prev_file_arr))
+                            ).pvalue
+                    else:
+                        pvalue = 0
                     print(key)
                     print(prev_file_arr, file_arr, f"p = {pvalue:.3f}")
                     collection_with_diffs.add(key.split("/")[0])
