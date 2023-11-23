@@ -117,7 +117,9 @@ def bara(files, match, unmatch, serve):
                              != ak.num(prev_file_arr, axis=1))
                    or ak.any(ak.nan_to_none(file_arr)
                              != ak.nan_to_none(prev_file_arr))):
-                    if ak.num(file_arr, axis=0) > 0 and ak.num(prev_file_arr, axis=0) > 0:
+                    if (ak.num(ak.flatten(file_arr), axis=0) > 0 and
+                        ak.num(ak.flatten(prev_file_arr), axis=0) > 0):
+                        # We can only apply the KS test on non-empty arrays
                         pvalue = kstest(
                                 ak.to_numpy(ak.flatten(file_arr)),
                                 ak.to_numpy(ak.flatten(prev_file_arr))
