@@ -134,24 +134,25 @@ def bara(files, match, unmatch, serve):
 
     def to_filename(branch_name):
         return branch_name.replace("#", "__pound__")
-    menu = []
+    options = []
     for collection_name, figs in collection_figs.items():
         if collection_name in collection_with_diffs:
-            menu.append((collection_name + " (*)", to_filename(collection_name)))
-    menu.append(None)
+            options.append((to_filename(collection_name), collection_name + " (*)"))
     for collection_name, figs in collection_figs.items():
         if collection_name not in collection_with_diffs:
-            menu.append((collection_name, to_filename(collection_name)))
+            options.append((to_filename(collection_name), collection_name))
 
-    from bokeh.models import CustomJS, Dropdown
-    def mk_dropdown(label="Select branch"):
-        dropdown = Dropdown(label=label, menu=menu, width=350, button_type="primary")
-        dropdown.js_on_event("menu_item_click", CustomJS(code="""
-          console.log('dropdown: ' + this.item, this.toString())
-          window.location.hash = "#" + this.item;
-          fetch(this.item + '.json')
-            .then(function(response) { return response.json(); })
-            .then(function(item) { Bokeh.documents[0].replace_with_json(item.doc); })
+    from bokeh.models import CustomJS, Select
+    def mk_dropdown(value=""):
+        dropdown = Select(title="Select branch:", value=value, options=options)
+        dropdown.js_on_change("value", CustomJS(code="""
+          console.log('dropdown: ' + this.value, this.toString())
+          window.location.hash = "#" + this.value;
+          if (this.value != "") {
+            fetch(this.value + '.json')
+              .then(function(response) { return response.json(); })
+              .then(function(item) { Bokeh.documents[0].replace_with_json(item.doc); })
+          }
         """))
         return dropdown
 
