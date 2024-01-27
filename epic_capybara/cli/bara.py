@@ -142,7 +142,7 @@ def bara(files, match, unmatch, serve):
         key += collection_name.lstrip("_")
         return key
 
-    options = []
+    options = [("", "")]
     for collection_name, figs in sorted(collection_figs.items(), key=option_key):
         marker = " (*)" if collection_name in collection_with_diffs else ""
         options.append((to_filename(collection_name), collection_name + marker))
@@ -152,8 +152,8 @@ def bara(files, match, unmatch, serve):
         dropdown = Select(title="Select branch:", value=value, options=options)
         dropdown.js_on_change("value", CustomJS(code="""
           console.log('dropdown: ' + this.value, this.toString())
-          window.location.hash = "#" + this.value;
           if (this.value != "") {
+            window.location.hash = "#" + this.value;
             fetch(this.value + '.json')
               .then(function(response) { return response.json(); })
               .then(function(item) { Bokeh.documents[0].replace_with_json(item.doc); })
