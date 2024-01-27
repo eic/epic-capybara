@@ -134,13 +134,18 @@ def bara(files, match, unmatch, serve):
 
     def to_filename(branch_name):
         return branch_name.replace("#", "__pound__")
+
+    def option_key(item):
+        collection_name, figs = item
+        key = ""
+        key += "A" if collection_name in collection_with_diffs else "B"
+        key += collection_name.lstrip("_")
+        return key
+
     options = []
-    for collection_name, figs in collection_figs.items():
-        if collection_name in collection_with_diffs:
-            options.append((to_filename(collection_name), collection_name + " (*)"))
-    for collection_name, figs in collection_figs.items():
-        if collection_name not in collection_with_diffs:
-            options.append((to_filename(collection_name), collection_name))
+    for collection_name, figs in sorted(collection_figs.items(), key=option_key):
+        marker = " (*)" if collection_name in collection_with_diffs else ""
+        options.append((to_filename(collection_name), collection_name + marker))
 
     from bokeh.models import CustomJS, Select
     def mk_dropdown(value=""):
