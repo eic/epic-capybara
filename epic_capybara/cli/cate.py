@@ -54,11 +54,15 @@ def cate(ctx: click.Context, owner: str, repo: str, report_dir: str, token: str)
 
     recurse_upload(report_dir)
 
-    repo.create_file(
-        ".nojekyll",
-        f"Adding .nojekyll", # commit message
-        "",
-        branch="gh-pages",
-    )
+    try:
+        file = repo.get_contents(".nojekyll")
+    except github.GithubException.UnknownObjectException:
+        # file does not exist
+        repo.create_file(
+            ".nojekyll",
+            f"Adding .nojekyll", # commit message
+            "",
+            branch="gh-pages",
+        )
 
     click.echo(f"https://{user.login}.github.io/{repo.name}/{prefix}/")
