@@ -1,3 +1,4 @@
+import os
 import re
 
 import awkward as ak
@@ -164,6 +165,9 @@ def bara(files, match, unmatch, serve):
     from bokeh.layouts import column
     from bokeh.embed import json_item
     import json
+
+    os.makedirs("capybara-reports", exist_ok=True)
+
     for collection_name, figs in collection_figs.items():
         item = column(
           mk_dropdown(collection_name),
@@ -186,7 +190,6 @@ def bara(files, match, unmatch, serve):
     save(mk_dropdown())
 
     if serve:
-        import os
         os.chdir("capybara-reports/")
         from http.server import SimpleHTTPRequestHandler
         from socketserver import TCPServer
