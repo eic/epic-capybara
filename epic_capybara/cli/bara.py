@@ -101,7 +101,7 @@ def bara(files, match, unmatch, serve):
                 .Reg(nbins, 0, x_range, name="x", label=key)
                 .Int64()
             )
-            h.fill(x=ak.flatten(file_arr - x_min))
+            h.fill(x=ak.flatten(file_arr - x_min, axis=None))
 
             ys, edges = h.to_numpy()
             fig.step(
@@ -119,12 +119,12 @@ def bara(files, match, unmatch, serve):
                              != ak.num(prev_file_arr, axis=1))
                    or ak.any(ak.nan_to_none(file_arr)
                              != ak.nan_to_none(prev_file_arr))):
-                    if (ak.num(ak.flatten(file_arr), axis=0) > 0 and
-                        ak.num(ak.flatten(prev_file_arr), axis=0) > 0):
+                    if (ak.num(ak.flatten(file_arr, axis=None), axis=0) > 0 and
+                        ak.num(ak.flatten(prev_file_arr, axis=None), axis=0) > 0):
                         # We can only apply the KS test on non-empty arrays
                         pvalue = kstest(
-                                ak.to_numpy(ak.flatten(file_arr)),
-                                ak.to_numpy(ak.flatten(prev_file_arr))
+                                ak.to_numpy(ak.flatten(file_arr, axis=None)),
+                                ak.to_numpy(ak.flatten(prev_file_arr, axis=None))
                             ).pvalue
                     else:
                         pvalue = 0
