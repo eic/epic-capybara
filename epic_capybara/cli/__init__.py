@@ -16,3 +16,4 @@ def capybara(ctx: click.Context):
 
 capybara.add_command(capy)
 capybara.add_command(bara)
+capybara.add_command(cate)
