@@ -100,7 +100,10 @@ def bara(files, match, unmatch, serve):
             # not every file has the key
             collection_with_diffs.add(key.split("/")[0])
 
-        for (_file, file_arr), label, (color, line_width, line_dash) in zip(arr[key].items(), labels, vis_params):
+        for _file, label, (color, line_width, line_dash) in zip(files, labels, vis_params):
+            if _file not in arr[key]:
+                continue
+            file_arr = arr[key][_file]
             h = (
                 Hist.new
                 .Reg(nbins, 0, x_range, name="x", label=key)
