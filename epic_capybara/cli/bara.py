@@ -60,6 +60,10 @@ def bara(files, match, unmatch, serve):
         for key in keys:
             arr.setdefault(key, {})[_file] = tree[key].array()
 
+    paths = skip_common_prefix([_file.name.split("/") for _file in files])
+    paths = skip_common_prefix([reversed(list(path)) for path in paths])
+    labels = ["/".join(reversed(list(reversed_path))) for reversed_path in paths]
+
     collection_figs = {}
     collection_with_diffs = set()
 
@@ -91,9 +95,6 @@ def bara(files, match, unmatch, serve):
           ("red", 3, "dashed"),
           ("blue", 2, "dotted"),
         ]
-        paths = skip_common_prefix([_file.name.split("/") for _file in arr[key].keys()])
-        paths = skip_common_prefix([reversed(list(path)) for path in paths])
-        labels = ["/".join(reversed(list(reversed_path))) for reversed_path in paths]
 
         if set(arr[key].keys()) != set(files):
             # not every file has the key
