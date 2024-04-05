@@ -182,13 +182,16 @@ def bara(files, match, unmatch, serve):
             json.dump(json_item(item), fp)
 
     curdoc().js_on_event(DocumentReady, CustomJS(code="""
-      var location = window.location.hash.replace(/^#/, "");
-      if ((location != "") && ((typeof current_location === 'undefined') || (current_location != location))) {
-        fetch(location + '.json')
-            .then(function(response) { return response.json(); })
-            .then(function(item) { Bokeh.documents[0].replace_with_json(item.doc); })
-        window.current_location = location;
+      window.onhashchange = function() {
+        var location = window.location.hash.replace(/^#/, "");
+        if ((location != "") && ((typeof current_location === 'undefined') || (current_location != location))) {
+          fetch(location + '.json')
+              .then(function(response) { return response.json(); })
+              .then(function(item) { Bokeh.documents[0].replace_with_json(item.doc); })
+          window.current_location = location;
+        }
       }
+      window.onhashchange();
     """))
     output_file(filename="capybara-reports/index.html", title="ePIC capybara report")
     save(mk_dropdown())
