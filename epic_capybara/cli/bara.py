@@ -54,7 +54,7 @@ def bara(files, match, unmatch, serve):
         keys = [
             key for key in tree.keys(recursive=True)
             if not key.startswith("PARAMETERS")
-            and key.find("/") != -1
+            and len(tree[key].branches) == 0
             and match_filter(key, match, unmatch)
         ]
         for key in keys:
@@ -86,8 +86,13 @@ def bara(files, match, unmatch, serve):
            or any("* int" in str(ak.type(a)) for a in arr[key].values())):
             nbins = int(min(100, np.ceil(x_range)))
 
-        fig = figure(x_axis_label=key.split("/", 1)[1], y_axis_label="Entries")
-        collection_figs.setdefault(key.split("/")[0], []).append(fig)
+        if "/" in key:
+            branch_name, leaf_name = key.split("/", 1)
+        else:
+            branch_name = key
+            leaf_name = key
+        fig = figure(x_axis_label=leaf_name, y_axis_label="Entries")
+        collection_figs.setdefault(branch_name, []).append(fig)
 
         prev_file_arr = None
         vis_params = [
@@ -98,7 +103,7 @@ def bara(files, match, unmatch, serve):
 
         if set(arr[key].keys()) != set(files):
             # not every file has the key
-            collection_with_diffs.add(key.split("/")[0])
+            collection_with_diffs.add(branch_name)
 
         for _file, label, (color, line_width, line_dash) in zip(files, labels, vis_params):
             if _file not in arr[key]:
@@ -138,7 +143,7 @@ def bara(files, match, unmatch, serve):
                         pvalue = 0
                     print(key)
                     print(prev_file_arr, file_arr, f"p = {pvalue:.3f}")
-                    collection_with_diffs.add(key.split("/")[0])
+                    collection_with_diffs.add(branch_name)
             prev_file_arr = file_arr
 
     def to_filename(branch_name):
