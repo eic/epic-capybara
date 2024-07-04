@@ -56,7 +56,7 @@ def cate(ctx: click.Context, owner: str, repo: str, report_dir: str, token: str)
 
     try:
         file = repo.get_contents(".nojekyll")
-    except github.GithubException.UnknownObjectException:
+    except GithubException.UnknownObjectException:
         # file does not exist
         repo.create_file(
             ".nojekyll",
