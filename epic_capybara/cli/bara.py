@@ -65,7 +65,7 @@ def bara(files, match, unmatch, serve):
     labels = ["/".join(reversed(list(reversed_path))) for reversed_path in paths]
 
     collection_figs = {}
-    collection_with_diffs = set()
+    collection_with_diffs = {}
 
     for key in sorted(arr.keys()):
         x_min = min(filter(
@@ -103,7 +103,7 @@ def bara(files, match, unmatch, serve):
 
         if set(arr[key].keys()) != set(files):
             # not every file has the key
-            collection_with_diffs.add(branch_name)
+            collection_with_diffs[branch_name] = 0.0
 
         for _file, label, (color, line_width, line_dash) in zip(files, labels, vis_params):
             if _file not in arr[key]:
@@ -143,7 +143,7 @@ def bara(files, match, unmatch, serve):
                         pvalue = 0
                     print(key)
                     print(prev_file_arr, file_arr, f"p = {pvalue:.3f}")
-                    collection_with_diffs.add(branch_name)
+                    collection_with_diffs[branch_name] = pvalue
             prev_file_arr = file_arr
 
     def to_filename(branch_name):
@@ -152,18 +152,34 @@ def bara(files, match, unmatch, serve):
     def option_key(item):
         collection_name, figs = item
         key = ""
-        key += "A" if collection_name in collection_with_diffs else "B"
+        if collection_name in collection_with_diffs:
+            if collection_with_diffs[collection_name] > 0.99:
+                key += " 0.99"
+            elif collection_with_diffs[collection_name] > 0.95:
+                key += " 0.95"
+            elif collection_with_diffs[collection_name] > 0.67:
+                key += " 0.67"
+            else:
+                key += " 0.00"
         key += collection_name.lstrip("_")
         return key
 
     options = [("", "")]
     for collection_name, figs in sorted(collection_figs.items(), key=option_key):
-        marker = " (*)" if collection_name in collection_with_diffs else ""
+        if collection_name in collection_with_diffs:
+            if collection_with_diffs[collection_name] > 0.99:
+                marker = " (*)"
+            elif collection_with_diffs[collection_name] > 0.95:
+                marker = " (**)"
+            elif collection_with_diffs[collection_name] > 0.67:
+                marker = " (***)"
+            else:
+                marker = " (****)"
         options.append((to_filename(collection_name), collection_name + marker))
 
     from bokeh.models import CustomJS, Select
     def mk_dropdown(value=""):
-        dropdown = Select(title="Select branch:", value=value, options=options)
+        dropdown = Select(title="Select branch (**** < 67% CL, ..., * > 99% CL stat. equiv.):", value=value, options=options)
         dropdown.js_on_change("value", CustomJS(code="""
           console.log('dropdown: ' + this.value, this.toString())
           if (this.value != "") {
