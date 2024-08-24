@@ -8,6 +8,7 @@ import uproot
 from bokeh.events import DocumentReady
 from bokeh.io import curdoc
 from bokeh.layouts import gridplot
+from bokeh.models import Range1d
 from bokeh.plotting import figure, output_file, save
 from hist import Hist
 from scipy.stats import kstest
@@ -79,7 +80,7 @@ def bara(files, match, unmatch, serve):
             map(lambda a: ak.max(ak.mask(a - x_min, np.isfinite(a))), arr[key].values())
         ), default=None) + 1
 
-        xmax = x_min + x_range
+        x_max = x_min + x_range
 
         nbins = 10
         if (any("* uint" in str(ak.type(a)) for a in arr[key].values())
@@ -91,8 +92,10 @@ def bara(files, match, unmatch, serve):
         else:
             branch_name = key
             leaf_name = key
+
         fig = figure(x_axis_label=leaf_name, y_axis_label="Entries")
         collection_figs.setdefault(branch_name, []).append(fig)
+        y_max = 0
 
         prev_file_arr = None
         vis_params = [
@@ -144,7 +147,17 @@ def bara(files, match, unmatch, serve):
                     print(key)
                     print(prev_file_arr, file_arr, f"p = {pvalue:.3f}")
                     collection_with_diffs[branch_name] = pvalue
+
+            y_max = max(y_max, np.max(y0 + np.sqrt(y0)))
             prev_file_arr = file_arr
+
+        # Set y range for histograms
+        fig.x_range = Range1d(
+            x_min - 0.05 * (x_max - x_min), x_max + 0.05 * (x_max - x_min),
+            bounds=(x_min - 0.05 * (x_max - x_min), x_max + 0.05 * (x_max - x_min)))
+        fig.y_range = Range1d(
+            - 0.05 * y_max, 1.05 * y_max,
+            bounds=(- 0.05 * y_max, 1.05 * y_max))
 
     def to_filename(branch_name):
         return branch_name.replace("#", "__pound__")
