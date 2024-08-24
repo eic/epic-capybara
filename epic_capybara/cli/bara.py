@@ -99,16 +99,16 @@ def bara(files, match, unmatch, serve):
 
         prev_file_arr = None
         vis_params = [
-          ("green", 1.5, "solid"),
-          ("red", 3, "dashed"),
-          ("blue", 2, "dotted"),
+          ("green", 1.5, "solid", " "),
+          ("red", 3, "dashed", ","),
+          ("blue", 2, "dotted", "."),
         ]
 
         if set(arr[key].keys()) != set(files):
             # not every file has the key
             collection_with_diffs[branch_name] = 0.0
 
-        for _file, label, (color, line_width, line_dash) in zip(files, labels, vis_params):
+        for _file, label, (color, line_width, line_dash, hatch_pattern) in zip(files, labels, vis_params):
             if _file not in arr[key]:
                 continue
             file_arr = arr[key][_file]
