@@ -129,6 +129,8 @@ def bara(files, match, unmatch, serve):
                 line_dash=line_dash,
             )
 
+            # diff and KS test
+            pvalue = None
             if prev_file_arr is not None:
                 if ((ak.num(file_arr, axis=0) != ak.num(prev_file_arr, axis=0))
                    or ak.any(ak.num(file_arr, axis=1)
@@ -146,7 +148,7 @@ def bara(files, match, unmatch, serve):
                         pvalue = 0
                     print(key)
                     print(prev_file_arr, file_arr, f"p = {pvalue:.3f}")
-                    collection_with_diffs[branch_name] = pvalue
+                    collection_with_diffs[branch_name] = min(pvalue, collection_with_diffs.get(branch_name, 1.))
 
             y_max = max(y_max, np.max(y0 + np.sqrt(y0)))
             prev_file_arr = file_arr
