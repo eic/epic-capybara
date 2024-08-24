@@ -112,22 +112,6 @@ def bara(files, match, unmatch, serve):
             if _file not in arr[key]:
                 continue
             file_arr = arr[key][_file]
-            h = (
-                Hist.new
-                .Reg(nbins, 0, x_range, name="x", label=key)
-                .Int64()
-            )
-            h.fill(x=ak.flatten(file_arr - x_min, axis=None))
-
-            ys, edges = h.to_numpy()
-            fig.step(
-                edges + x_min, np.concatenate([ys, [ys[-1]]]),
-                mode="after",
-                legend_label=label,
-                line_color=color,
-                line_width=line_width,
-                line_dash=line_dash,
-            )
 
             # diff and KS test
             pvalue = None
@@ -150,6 +134,26 @@ def bara(files, match, unmatch, serve):
                     print(prev_file_arr, file_arr, f"p = {pvalue:.3f}")
                     collection_with_diffs[branch_name] = min(pvalue, collection_with_diffs.get(branch_name, 1.))
 
+            # Figure
+            h = (
+                Hist.new
+                .Reg(nbins, 0, x_range, name="x", label=key)
+                .Int64()
+            )
+            h.fill(x=ak.flatten(file_arr - x_min, axis=None))
+
+            ys, edges = h.to_numpy()
+            y0 = np.concatenate([ys, [ys[-1]]])
+            legend_label=label + (f"\n{100*pvalue:.0f}%CL KS" if pvalue is not None else "")
+            fig.step(
+                x=edges + x_min,
+                y=y0,
+                mode="after",
+                legend_label=legend_label,
+                line_color=color,
+                line_width=line_width,
+                line_dash=line_dash,
+            )
             y_max = max(y_max, np.max(y0 + np.sqrt(y0)))
             prev_file_arr = file_arr
 
