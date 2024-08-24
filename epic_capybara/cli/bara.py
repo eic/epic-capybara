@@ -154,6 +154,19 @@ def bara(files, match, unmatch, serve):
                 line_width=line_width,
                 line_dash=line_dash,
             )
+            fig.varea_step(
+                x=edges + x_min,
+                y1=y0 - np.sqrt(y0),
+                y2=y0 + np.sqrt(y0),
+                step_mode="after",
+                legend_label=legend_label,
+                fill_color=color if hatch_pattern == " " else None,
+                fill_alpha=0.25,
+                hatch_color=color,
+                hatch_alpha=0.5,
+                hatch_pattern=hatch_pattern,
+            )
+
             y_max = max(y_max, np.max(y0 + np.sqrt(y0)))
             prev_file_arr = file_arr
 
