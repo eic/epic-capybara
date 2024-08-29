@@ -80,8 +80,6 @@ def bara(files, match, unmatch, serve):
             map(lambda a: ak.max(ak.mask(a - x_min, np.isfinite(a))), arr[key].values())
         ), default=None) + 1
 
-        x_max = x_min + x_range
-
         nbins = 10
         if (any("* uint" in str(ak.type(a)) for a in arr[key].values())
            or any("* int" in str(ak.type(a)) for a in arr[key].values())):
@@ -170,13 +168,15 @@ def bara(files, match, unmatch, serve):
             y_max = max(y_max, np.max(y0 + np.sqrt(y0)))
             prev_file_arr = file_arr
 
+        x_bounds = (x_min - 0.05 * x_range, x_min + 1.05 * x_range)
+        y_bounds = (- 0.05 * y_max, 1.05 * y_max)
         # Set y range for histograms
         fig.x_range = Range1d(
-            x_min - 0.05 * (x_max - x_min), x_max + 0.05 * (x_max - x_min),
-            bounds=(x_min - 0.05 * (x_max - x_min), x_max + 0.05 * (x_max - x_min)))
+            *x_bounds,
+            bounds=x_bounds)
         fig.y_range = Range1d(
-            - 0.05 * y_max, 1.05 * y_max,
-            bounds=(- 0.05 * y_max, 1.05 * y_max))
+            *y_bounds,
+            bounds=y_bounds)
 
     def to_filename(branch_name):
         return branch_name.replace("#", "__pound__")
