@@ -198,6 +198,7 @@ def bara(files, match, unmatch, serve):
 
     options = [("", "")]
     for collection_name, figs in sorted(collection_figs.items(), key=option_key):
+        marker = ""
         if collection_name in collection_with_diffs:
             if collection_with_diffs[collection_name] > 0.99:
                 marker = " (*)"
