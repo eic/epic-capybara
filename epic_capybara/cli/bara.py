@@ -175,10 +175,14 @@ def bara(files, match, unmatch, serve):
             fig.x_range = Range1d(
                 *x_bounds,
                 bounds=x_bounds)
+        else:
+            click.secho(f"overflow while calculating x bounds for \"{key}\"", fg="red",  err=True)
         if np.all(np.isfinite(y_bounds)):
             fig.y_range = Range1d(
                 *y_bounds,
                 bounds=y_bounds)
+        else:
+            click.secho(f"overflow while calculating y bounds for \"{key}\"", fg="red", err=True)
 
     def to_filename(branch_name):
         return branch_name.replace("#", "__pound__")
