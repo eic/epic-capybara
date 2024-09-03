@@ -172,15 +172,21 @@ def bara(files, match, unmatch, serve):
         y_bounds = (- 0.05 * y_max, 1.05 * y_max)
         # Set y range for histograms
         if np.all(np.isfinite(x_bounds)):
-            fig.x_range = Range1d(
-                *x_bounds,
-                bounds=x_bounds)
+            try:
+                fig.x_range = Range1d(
+                    *x_bounds,
+                    bounds=x_bounds)
+            except ValueError as e:
+                sclick.secho(str(e), fg="red", err=True)
         else:
-            click.secho(f"overflow while calculating x bounds for \"{key}\"", fg="red",  err=True)
+            click.secho(f"overflow while calculating x bounds for \"{key}\"", fg="red", err=True)
         if np.all(np.isfinite(y_bounds)):
-            fig.y_range = Range1d(
-                *y_bounds,
-                bounds=y_bounds)
+            try:
+                fig.y_range = Range1d(
+                    *y_bounds,
+                    bounds=y_bounds)
+            except ValueError as e:
+                sclick.secho(str(e), fg="red", err=True)
         else:
             click.secho(f"overflow while calculating y bounds for \"{key}\"", fg="red", err=True)
 
