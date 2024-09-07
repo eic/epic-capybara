@@ -177,7 +177,7 @@ def bara(files, match, unmatch, serve):
                     *x_bounds,
                     bounds=x_bounds)
             except ValueError as e:
-                sclick.secho(str(e), fg="red", err=True)
+                click.secho(str(e), fg="red", err=True)
         else:
             click.secho(f"overflow while calculating x bounds for \"{key}\"", fg="red", err=True)
         if np.all(np.isfinite(y_bounds)):
@@ -186,7 +186,7 @@ def bara(files, match, unmatch, serve):
                     *y_bounds,
                     bounds=y_bounds)
             except ValueError as e:
-                sclick.secho(str(e), fg="red", err=True)
+                click.secho(str(e), fg="red", err=True)
         else:
             click.secho(f"overflow while calculating y bounds for \"{key}\"", fg="red", err=True)
 
