@@ -69,6 +69,9 @@ def bara(files, match, unmatch, serve):
     collection_with_diffs = {}
 
     for key in sorted(arr.keys()):
+        if any("string" in str(ak.type(a)) for a in arr[key].values()):
+            click.echo(f"String value detected for key \"{key}\". Skipping...")
+            continue
         x_min = min(filter(
             lambda v: v is not None,
             map(lambda a: ak.min(ak.mask(a, np.isfinite(a))), arr[key].values())
