@@ -5,11 +5,11 @@ from itertools import chain, cycle, dropwhile, starmap, tee
 
 def get_cache_dir():
     if "XDG_CACHE_HOME" in os.environ:
-        return os.environ["XDG_CACHE_HOME"]
+        return os.environ["XDG_CACHE_HOME"] / "epic-capybara"
     elif "HOME" in os.environ:
-        return Path(os.environ["HOME"]) / ".cache"
+        return Path(os.environ["HOME"]) / ".cache" / "epic-capybara"
     elif "TMPDIR" in os.environ:
-        return Path(os.environ["TMPDIR"])
+        return Path(os.environ["TMPDIR"]) / "epic-capybara"
     else:
         raise RuntimeError("Unable to fine a suitable cache location")
 
