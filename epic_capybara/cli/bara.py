@@ -1,3 +1,4 @@
+import gzip
 import os
 import re
 
@@ -232,9 +233,7 @@ def bara(files, match, unmatch, serve):
           console.log('dropdown: ' + this.value, this.toString())
           if (this.value != "") {
             window.location.hash = "#" + this.value;
-            fetch(this.value + '.json')
-              .then(function(response) { return response.json(); })
-              .then(function(item) { Bokeh.documents[0].replace_with_json(item.doc); })
+            fetchAndReplaceBokehDocument(this.value);
           }
         """))
         return dropdown
@@ -251,16 +250,33 @@ def bara(files, match, unmatch, serve):
           gridplot(figs, ncols=3, width=400, height=300),
         )
 
-        with open(f"capybara-reports/{to_filename(collection_name)}.json", "w") as fp:
+        with gzip.open(f"capybara-reports/{to_filename(collection_name)}.json.gz", "wt") as fp:
             json.dump(json_item(item), fp)
 
     curdoc().js_on_event(DocumentReady, CustomJS(code="""
+      function fetchAndReplaceBokehDocument(location) {
+        fetch(location + '.json.gz')
+          .then(async function(response) {
+            if (!response.ok) {
+                throw new Error('Network response was not ok');
+            }
+
+            const ds = new DecompressionStream('gzip');
+            const decompressedStream = response.body.pipeThrough(ds);
+            const decompressedResponse = new Response(decompressedStream);
+            const item = await decompressedResponse.json();
+
+            Bokeh.documents[0].replace_with_json(item.doc);
+          })
+          .catch(function(error) {
+            console.error('Fetch or decompression failed:', error);
+          });
+      }
+
       window.onhashchange = function() {
         var location = window.location.hash.replace(/^#/, "");
         if ((location != "") && ((typeof current_location === 'undefined') || (current_location != location))) {
-          fetch(location + '.json')
-              .then(function(response) { return response.json(); })
-              .then(function(item) { Bokeh.documents[0].replace_with_json(item.doc); })
+          fetchAndReplaceBokehDocument(location);
           window.current_location = location;
         }
       }
