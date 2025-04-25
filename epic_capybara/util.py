@@ -1,4 +1,17 @@
+import os
+from pathlib import Path
 from itertools import chain, cycle, dropwhile, starmap, tee
+
+
+def get_cache_dir():
+    if "XDG_CACHE_HOME" in os.environ:
+        return os.environ["XDG_CACHE_HOME"]
+    elif "HOME" in os.environ:
+        return Path(os.environ["HOME"]) / ".cache"
+    elif "TMPDIR" in os.environ:
+        return Path(os.environ["TMPDIR"])
+    else:
+        raise RuntimeError("Unable to fine a suitable cache location")
 
 
 def skip_common_prefix(iters: list):

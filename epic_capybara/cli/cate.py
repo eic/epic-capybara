@@ -1,9 +1,13 @@
+import shutil
+import subprocess
+from github import Auth, Github, GithubException
 from pathlib import Path
 
 import click
-from github import Auth, Github, GithubException
+from urllib.parse import urlparse
 
 from ..filesystem import hashdir
+from ..util import get_cache_dir
 
 
 @click.command()
@@ -30,26 +34,21 @@ def cate(ctx: click.Context, owner: str, repo: str, report_dir: str, token: str)
 
     prefix = hashdir(report_dir)
 
-    def recurse_upload(cur_path):
-        paths = cur_path.iterdir()
-        for file_ in sorted([p for p in paths if p.is_file()]):
-            relpath = file_.relative_to(report_dir)
-            with open(file_, "rb") as fp:
-                contents = fp.read()
-            target_path = f"{prefix}/{relpath}"
-            click.secho(f"Uploading {target_path}", fg="green", err=True)
-            repo.create_file(
-                target_path,
-                f"Adding {target_path}", # commit message
-                contents.decode(),
-                branch="gh-pages",
-            )
+    clone_url = urlparse(repo.clone_url)
+    # Add authentication information
+    clone_url = clone_url._replace(
+        netloc=f"{user.login}:{token}@{clone_url.netloc}",
+    )
+    local_repo = get_cache_dir() / user.login / repo.name
 
-        paths = cur_path.iterdir()
-        for dir_ in sorted([p for p in paths if p.is_dir()]):
-            recurse_upload(dir_)
-
-    recurse_upload(report_dir)
+    if not local_repo.exists():
+        subprocess.check_output(["git", "clone", clone_url.geturl(), str(local_repo)])
+    else:
+        subprocess.check_output(["git", "-C", str(local_repo), "pull"])
+    shutil.copytree(report_dir, local_repo / prefix)
+    subprocess.check_output(["git", "-C", str(local_repo), "add", prefix])
+    subprocess.check_output(["git", "-C", str(local_repo), "commit", "-m", f"Adding {prefix}/"])
+    subprocess.check_output(["git", "-C", str(local_repo), "push"])
 
     try:
         file = repo.get_contents(".nojekyll")
