@@ -14,20 +14,17 @@ from ..filesystem import hashdir
 @click.pass_context
 def cate(ctx: click.Context, owner: str, repo: str, report_dir: str, token: str):
     gh = Github(auth=Auth.Token(token))
+
     if owner is not None:
         user = gh.get_user(owner)
-        try:
-            repo = user.get_repo(repo)
-        except GithubException:
-            click.secho(f"Repository {owner}/{repo} is not available.", fg="red", err=True)
-            repo = user.create_repo(repo)
     else:
         user = gh.get_user()
-        try:
-            repo = user.get_repo(repo)
-        except GithubException:
-            click.secho(f"Repository {user.login}/{repo} is not available. Attempting to create...", fg="yellow", err=True)
-            repo = user.create_repo(repo)
+
+    try:
+        repo = user.get_repo(repo)
+    except GithubException:
+        click.secho(f"Repository {user.login}/{repo.name} is not available. Attempting to create...", fg="yellow", err=True)
+        repo = user.create_repo(repo)
 
     report_dir = Path(report_dir)
 
