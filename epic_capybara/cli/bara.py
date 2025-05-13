@@ -10,6 +10,7 @@ from bokeh.events import DocumentReady
 from bokeh.io import curdoc
 from bokeh.layouts import gridplot
 from bokeh.models import Range1d
+from bokeh.models import PrintfTickFormatter
 from bokeh.plotting import figure, output_file, save
 from hist import Hist
 from scipy.stats import kstest
@@ -82,7 +83,10 @@ def bara(files, match, unmatch, serve):
         x_range = max(filter(
             lambda v: v is not None,
             map(lambda a: ak.max(ak.mask(a - x_min, np.isfinite(a))), arr[key].values())
-        ), default=None) + 1
+        ), default=None)
+        
+        if x_range == 0 or x_range is None:
+            x_range = 1
 
         nbins = 10
         if (any("* uint" in str(ak.type(a)) for a in arr[key].values())
@@ -96,6 +100,7 @@ def bara(files, match, unmatch, serve):
             leaf_name = key
 
         fig = figure(x_axis_label=leaf_name, y_axis_label="Entries")
+        fig.xaxis.formatter = PrintfTickFormatter(format="%.1e")
         collection_figs.setdefault(branch_name, []).append(fig)
         y_max = 0
 
