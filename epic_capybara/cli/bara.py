@@ -84,14 +84,16 @@ def bara(files, match, unmatch, serve):
             lambda v: v is not None,
             map(lambda a: ak.max(ak.mask(a - x_min, np.isfinite(a))), arr[key].values())
         ), default=None)
-        
-        if x_range == 0 or x_range is None:
-            x_range = 1
-
         nbins = 10
         if (any("* uint" in str(ak.type(a)) for a in arr[key].values())
            or any("* int" in str(ak.type(a)) for a in arr[key].values())):
+            x_range = x_range + 1
             nbins = int(min(100, np.ceil(x_range)))
+        else:
+            x_range = x_range*1.1
+
+        if x_range == 0 or x_range is None:
+            x_range = 1
 
         if "/" in key:
             branch_name, leaf_name = key.split("/", 1)
