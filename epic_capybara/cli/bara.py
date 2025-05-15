@@ -86,9 +86,8 @@ def bara(files, match, unmatch, serve):
         ), default=None)
         nbins = 10
 
-        is_int = (any("* uint" in str(ak.type(a)) for a in arr[key].values())
-           or any("* int" in str(ak.type(a)) for a in arr[key].values()))
-        if is_int:
+        if (any("* uint" in str(ak.type(a)) for a in arr[key].values())
+           or any("* int" in str(ak.type(a)) for a in arr[key].values())):
             x_range = x_range + 1
             nbins = int(min(100, np.ceil(x_range)))
         else:
@@ -104,8 +103,7 @@ def bara(files, match, unmatch, serve):
             leaf_name = key
 
         fig = figure(x_axis_label=leaf_name, y_axis_label="Entries")
-        if not is_int:
-            fig.xaxis.formatter = PrintfTickFormatter(format="%.1e")
+        fig.xaxis.formatter = PrintfTickFormatter(format="%.2g")
         collection_figs.setdefault(branch_name, []).append(fig)
         y_max = 0
 
