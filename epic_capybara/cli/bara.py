@@ -90,9 +90,9 @@ def bara(files, match, unmatch, serve):
             x_range = x_range + 1
             nbins = int(min(100, np.ceil(x_range)))
         else:
-            x_range = x_range*1.1
+            x_range = x_range * 1.1
 
-        if x_range == 0 or x_range is None:
+        if x_range == 0:
             x_range = 1
 
         if "/" in key:
