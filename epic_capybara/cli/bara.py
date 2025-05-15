@@ -10,6 +10,7 @@ from bokeh.events import DocumentReady
 from bokeh.io import curdoc
 from bokeh.layouts import gridplot
 from bokeh.models import Range1d
+from bokeh.models import PrintfTickFormatter
 from bokeh.plotting import figure, output_file, save
 from hist import Hist
 from scipy.stats import kstest
@@ -82,12 +83,18 @@ def bara(files, match, unmatch, serve):
         x_range = max(filter(
             lambda v: v is not None,
             map(lambda a: ak.max(ak.mask(a - x_min, np.isfinite(a))), arr[key].values())
-        ), default=None) + 1
-
+        ), default=None)
         nbins = 10
+
         if (any("* uint" in str(ak.type(a)) for a in arr[key].values())
            or any("* int" in str(ak.type(a)) for a in arr[key].values())):
+            x_range = x_range + 1
             nbins = int(min(100, np.ceil(x_range)))
+        else:
+            x_range = x_range * 1.1
+
+        if x_range == 0:
+            x_range = 1
 
         if "/" in key:
             branch_name, leaf_name = key.split("/", 1)
@@ -96,6 +103,8 @@ def bara(files, match, unmatch, serve):
             leaf_name = key
 
         fig = figure(x_axis_label=leaf_name, y_axis_label="Entries")
+        if x_range < 1.:
+            fig.xaxis.formatter = PrintfTickFormatter(format="%.2g")
         collection_figs.setdefault(branch_name, []).append(fig)
         y_max = 0
 
@@ -168,6 +177,7 @@ def bara(files, match, unmatch, serve):
                 hatch_alpha=0.5,
                 hatch_pattern=hatch_pattern,
             )
+            fig.legend.background_fill_alpha = 0.5 # make legend more transparent
 
             y_max = max(y_max, np.max(y0 + np.sqrt(y0)))
             prev_file_arr = file_arr
