@@ -103,7 +103,8 @@ def bara(files, match, unmatch, serve):
             leaf_name = key
 
         fig = figure(x_axis_label=leaf_name, y_axis_label="Entries")
-        fig.xaxis.formatter = PrintfTickFormatter(format="%.2g")
+        if x_range < 1.:
+            fig.xaxis.formatter = PrintfTickFormatter(format="%.2g")
         collection_figs.setdefault(branch_name, []).append(fig)
         y_max = 0
 
