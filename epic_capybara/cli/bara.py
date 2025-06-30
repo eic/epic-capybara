@@ -60,8 +60,14 @@ def bara(files, match, unmatch, serve):
             and len(tree[key].branches) == 0
             and match_filter(key, match, unmatch)
         ]
+
+        sort_by_evtnum = None
+        if "EventHeader.eventNumber" in keys:
+            evtnum = tree["EventHeader.eventNumber"].array()
+            sort_by_evtnum = ak.argsort(ak.flatten(evtnum))
+
         for key in keys:
-            arr.setdefault(key, {})[_file] = tree[key].array()
+            arr.setdefault(key, {})[_file] = tree[key].array(evtnum) if sort_by_evtnum is None else tree[key].array()[sort_by_evtnum]
 
     paths = skip_common_prefix([_file.name.split("/") for _file in files])
     paths = skip_common_prefix([reversed(list(path)) for path in paths])
