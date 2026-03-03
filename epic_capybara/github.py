@@ -28,6 +28,13 @@ def download_artifact(workflow, artifact_name, token=None, click=None):
 
     artifact, = artifacts
     req = requests.get(artifact.archive_download_url, headers={"Authorization": f"token {token}"} if token else {})
+
+    content_type = req.headers.get("content-type", "")
+    if "zip" not in content_type.lower():
+        with open(outpath, "wb") as fp_out:
+            fp_out.write(req.content)
+        return outpath
+
     zfp = ZipFile(io.BytesIO(req.content))
 
     # Check if this is a single file zip
