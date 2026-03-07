@@ -39,17 +39,24 @@ def _normalize_key(key):
     This function converts TTree-style keys to the RNTuple-style format so that
     the same physics quantity has the same key regardless of the input file format.
 
+    TTree keys for fixed-size array branches include a trailing '[N]' size
+    annotation (e.g. 'covariance.covariance[21]') which is absent in RNTuple
+    keys; this suffix is stripped so the two formats match.
+
     >>> _normalize_key('MCParticles/MCParticles.momentum.x')
     'MCParticles.momentum.x'
     >>> _normalize_key('MCParticles.momentum.x')
     'MCParticles.momentum.x'
     >>> _normalize_key('EventHeader/EventHeader.eventNumber')
     'EventHeader.eventNumber'
+    >>> _normalize_key('CentralCKFTrackParameters/CentralCKFTrackParameters.covariance.covariance[21]')
+    'CentralCKFTrackParameters.covariance.covariance'
     """
     if "/" in key:
         _, field_part = key.split("/", 1)
-        return field_part
-    return key
+    else:
+        field_part = key
+    return re.sub(r'\[\d+\]$', '', field_part)
 
 
 def match_filter(key, match, unmatch):
