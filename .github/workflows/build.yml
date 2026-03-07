@@ -15,3 +15,7 @@ jobs:
           pip install hatch
           hatch build
           pip install dist/*.whl
+      - name: Install test dependencies
+        run: pip install ".[test]"
+      - name: Run tests
+        run: pytest tests/ -v

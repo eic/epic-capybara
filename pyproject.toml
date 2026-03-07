@@ -36,6 +36,13 @@ dependencies = [
 ]
 dynamic = ["version"]
 
+[project.optional-dependencies]
+test = [
+  "pytest",
+  "pytest-cov",
+  "scikit-hep-testdata",
+]
+
 [project.urls]
 Documentation = "https://github.com/eic/epic-capybara#readme"
 Issues = "https://github.com/eic/epic-capybara/issues"
@@ -51,10 +58,7 @@ cate = "epic_capybara.cli:cate"
 path = "epic_capybara/__about__.py"
 
 [tool.hatch.envs.default]
-dependencies = [
-  "pytest",
-  "pytest-cov",
-]
+features = ["test"]
 [tool.hatch.envs.default.scripts]
 cov = "pytest --cov-report=term-missing --cov-config=pyproject.toml --cov=epic_capybara --cov=tests {args}"
 no-cov = "cov --no-cov {args}"
