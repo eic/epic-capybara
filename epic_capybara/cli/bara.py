@@ -138,8 +138,8 @@ def bara(files, match, unmatch, serve):
             pvalue = None
             if prev_file_arr is not None:
                 if ((ak.num(file_arr, axis=0) != ak.num(prev_file_arr, axis=0))
-                   or ak.any(ak.num(file_arr, axis=1)
-                             != ak.num(prev_file_arr, axis=1))
+                   or (file_arr.ndim > 1 and ak.any(ak.num(file_arr, axis=1)
+                             != ak.num(prev_file_arr, axis=1)))
                    or ak.any(ak.nan_to_none(file_arr)
                              != ak.nan_to_none(prev_file_arr))):
                     if (ak.num(ak.flatten(file_arr, axis=None), axis=0) > 0 and
