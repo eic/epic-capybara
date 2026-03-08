@@ -18,6 +18,47 @@ from scipy.stats import kstest
 from ..util import skip_common_prefix
 
 
+def _is_leaf(obj):
+    """Check if an uproot branch/field object is a leaf (has no sub-branches/sub-fields).
+
+    Supports both TTree TBranch objects (which use `.branches`) and
+    RNTuple RField objects (which use `.fields`).
+    """
+    if hasattr(obj, 'branches'):
+        return len(obj.branches) == 0
+    if hasattr(obj, 'fields'):
+        return len(obj.fields) == 0
+    return True
+
+
+def _normalize_key(key):
+    """Normalize uproot key format between TTree and RNTuple styles.
+
+    TTree EDM4hep keys follow 'CollectionName/CollectionName.fieldPath' pattern.
+    RNTuple EDM4hep keys follow 'CollectionName.fieldPath' pattern.
+    This function converts TTree-style keys to the RNTuple-style format so that
+    the same physics quantity has the same key regardless of the input file format.
+
+    TTree keys for fixed-size array branches include a trailing '[N]' size
+    annotation (e.g. 'covariance.covariance[21]') which is absent in RNTuple
+    keys; this suffix is stripped so the two formats match.
+
+    >>> _normalize_key('MCParticles/MCParticles.momentum.x')
+    'MCParticles.momentum.x'
+    >>> _normalize_key('MCParticles.momentum.x')
+    'MCParticles.momentum.x'
+    >>> _normalize_key('EventHeader/EventHeader.eventNumber')
+    'EventHeader.eventNumber'
+    >>> _normalize_key('CentralCKFTrackParameters/CentralCKFTrackParameters.covariance.covariance[21]')
+    'CentralCKFTrackParameters.covariance.covariance'
+    """
+    if "/" in key:
+        _, field_part = key.split("/", 1)
+    else:
+        field_part = key
+    return re.sub(r'\[\d+\]$', '', field_part)
+
+
 def match_filter(key, match, unmatch):
     accept = True
     if match:
@@ -56,22 +97,20 @@ def bara(files, match, unmatch, serve):
         tree = uproot.open(_file)["events"]
 
         sort_by_evtnum = None
-        if "EventHeader/EventHeader.eventNumber" in tree.keys(recursive=True):
-            evtnum = tree["EventHeader/EventHeader.eventNumber"].array()
-            sort_by_evtnum = ak.argsort(ak.flatten(evtnum))
+        for evtnum_key in ["EventHeader/EventHeader.eventNumber", "EventHeader.eventNumber"]:
+            if evtnum_key in tree.keys(recursive=True):
+                evtnum = tree[evtnum_key].array()
+                sort_by_evtnum = ak.argsort(ak.flatten(evtnum))
+                break
 
-        keys = [
-            key for key in tree.keys(recursive=True)
-            if not key.startswith("PARAMETERS")
-            and len(tree[key].branches) == 0
-            and match_filter(key, match, unmatch)
-        ]
-
-        for key in keys:
-            val = tree[key].array()
-            if sort_by_evtnum is not None:
-                val = val[sort_by_evtnum]
-            arr.setdefault(key, {})[_file] = val
+        for key in tree.keys(recursive=True):
+            if not key.startswith("PARAMETERS") and _is_leaf(tree[key]):
+                normalized = _normalize_key(key)
+                if match_filter(normalized, match, unmatch):
+                    val = tree[key].array()
+                    if sort_by_evtnum is not None:
+                        val = val[sort_by_evtnum]
+                    arr.setdefault(normalized, {})[_file] = val
 
     paths = skip_common_prefix([_file.name.split("/") for _file in files])
     paths = skip_common_prefix([reversed(list(path)) for path in paths])
@@ -106,8 +145,9 @@ def bara(files, match, unmatch, serve):
         if x_range == 0:
             x_range = 1
 
-        if "/" in key:
-            branch_name, leaf_name = key.split("/", 1)
+        if "." in key:
+            branch_name = key.split(".", 1)[0]
+            leaf_name = key
         else:
             branch_name = key
             leaf_name = key
