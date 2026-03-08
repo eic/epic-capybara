@@ -146,7 +146,7 @@ def bara(files, match, unmatch, serve):
             x_range = 1
 
         if "." in key:
-            branch_name = key.split(".")[0]
+            branch_name = key.split(".", 1)[0]
             leaf_name = key
         else:
             branch_name = key
