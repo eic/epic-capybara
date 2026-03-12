@@ -345,6 +345,9 @@ def bara(files, match, unmatch, serve):
     os.makedirs("capybara-reports", exist_ok=True)
 
     for collection_name, figs in collection_figs.items():
+        for i, fig in enumerate(figs):
+            if fig.legend:
+                fig.legend.visible = (i == 0)
         item = column(
           mk_dropdown_minimal(collection_name),
           gridplot(figs, ncols=3, width=400, height=300),
