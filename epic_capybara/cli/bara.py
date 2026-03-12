@@ -152,7 +152,8 @@ def bara(files, match, unmatch, serve):
             branch_name = key
             leaf_name = key
 
-        fig = figure(x_axis_label=leaf_name, y_axis_label="Entries")
+        fig = figure(x_axis_label=leaf_name, y_axis_label="Entries",
+                     tools="pan,wheel_zoom,reset,save")
         if x_range < 1.:
             fig.xaxis.formatter = PrintfTickFormatter(format="%.2g")
         collection_figs.setdefault(branch_name, []).append(fig)
@@ -206,7 +207,7 @@ def bara(files, match, unmatch, serve):
             ys, edges = h.to_numpy()
             y0 = np.concatenate([ys, [ys[-1]]])
             legend_label=label + (f"\n{100*pvalue:.0f}%CL KS" if pvalue is not None else "")
-            fig.step(
+            step_r = fig.step(
                 x=edges + x_min,
                 y=y0,
                 mode="after",
@@ -215,7 +216,8 @@ def bara(files, match, unmatch, serve):
                 line_width=line_width,
                 line_dash=line_dash,
             )
-            fig.varea_step(
+            step_r.nonselection_glyph = step_r.glyph
+            varea_r = fig.varea_step(
                 x=edges + x_min,
                 y1=y0 - np.sqrt(y0),
                 y2=y0 + np.sqrt(y0),
@@ -227,6 +229,7 @@ def bara(files, match, unmatch, serve):
                 hatch_alpha=0.5,
                 hatch_pattern=hatch_pattern,
             )
+            varea_r.nonselection_glyph = varea_r.glyph
             fig.legend.background_fill_alpha = 0.5 # make legend more transparent
 
             y_max = max(y_max, np.max(y0 + np.sqrt(y0)))
