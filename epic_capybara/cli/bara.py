@@ -301,6 +301,22 @@ def bara(files, match, unmatch, serve):
         """))
         return dropdown
 
+    def mk_dropdown_minimal(value=""):
+        # Embed only the currently selected option; the full list is stored once
+        # in index.html's JavaScript and restored client-side after each load.
+        # This avoids repeating a ~54 KB options list in every .json.gz file.
+        label = next((lbl for val, lbl in options if val == value), value)
+        minimal_options = [("", "")] + ([(value, label)] if value else [])
+        dropdown = Select(title="Select branch (**** < 67% CL, ..., * > 99% CL stat. equiv.):", value=value, options=minimal_options)
+        dropdown.js_on_change("value", CustomJS(code="""
+          console.log('dropdown: ' + this.value, this.toString())
+          if (this.value != "") {
+            window.location.hash = "#" + this.value;
+            fetchAndReplaceBokehDocument(this.value);
+          }
+        """))
+        return dropdown
+
     from bokeh.layouts import column
     from bokeh.embed import json_item
     import json
@@ -309,14 +325,16 @@ def bara(files, match, unmatch, serve):
 
     for collection_name, figs in collection_figs.items():
         item = column(
-          mk_dropdown(collection_name),
+          mk_dropdown_minimal(collection_name),
           gridplot(figs, ncols=3, width=400, height=300),
         )
 
         with gzip.open(f"capybara-reports/{to_filename(collection_name)}.json.gz", "wt") as fp:
-            json.dump(json_item(item), fp)
+            json.dump(json_item(item), fp, separators=(',', ':'))
 
-    curdoc().js_on_event(DocumentReady, CustomJS(code="""
+    curdoc().js_on_event(DocumentReady, CustomJS(args={"all_options": options}, code="""
+      window._bokehSelectOptions = all_options;
+
       function fetchAndReplaceBokehDocument(location) {
         fetch(location + '.json.gz')
           .then(async function(response) {
@@ -330,6 +348,15 @@ def bara(files, match, unmatch, serve):
             const item = await decompressedResponse.json();
 
             Bokeh.documents[0].replace_with_json(item.doc);
+
+            // Restore the full options list to the newly loaded Select widget.
+            for (const [, model] of Bokeh.documents[0]._all_models) {
+              if (model.options instanceof Array) {
+                model.options = window._bokehSelectOptions;
+                model.value = location;
+                break;
+              }
+            }
           })
           .catch(function(error) {
             console.error('Fetch or decompression failed:', error);
