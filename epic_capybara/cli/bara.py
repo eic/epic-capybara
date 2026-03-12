@@ -11,6 +11,8 @@ from bokeh.io import curdoc
 from bokeh.layouts import gridplot
 from bokeh.models import ColumnDataSource
 from bokeh.models import CustomJSExpr
+from bokeh.models import Legend
+from bokeh.models import LegendItem
 from bokeh.models import Range1d
 from bokeh.models import PrintfTickFormatter
 from bokeh.plotting import figure, output_file, save
@@ -127,6 +129,7 @@ def bara(files, match, unmatch, serve):
     collection_figs = {}
     collection_with_diffs = {}
     collection_step_exprs = {}
+    collection_legend_items = {}
 
     for key in sorted(arr.keys()):
         if any("string" in str(ak.type(a)) for a in arr[key].values()):
@@ -165,10 +168,12 @@ def bara(files, match, unmatch, serve):
             branch_name,
             CustomJSExpr(code=_MIDPOINT_EXPR_CODE),
         )
+        fig_index = len(collection_figs.setdefault(branch_name, []))
+        show_legend = (fig_index == 0)
         fig = figure(x_axis_label=leaf_name, y_axis_label="Entries")
         if x_range < 1.:
             fig.xaxis.formatter = PrintfTickFormatter(format="%.2g")
-        collection_figs.setdefault(branch_name, []).append(fig)
+        collection_figs[branch_name].append(fig)
         y_max = 0
 
         prev_file_arr = None
@@ -231,7 +236,6 @@ def bara(files, match, unmatch, serve):
                 y={"expr": midpoint_expr},
                 mode="after",
                 source=source,
-                legend_label=legend_label,
                 line_color=color,
                 line_width=line_width,
                 line_dash=line_dash,
@@ -243,7 +247,6 @@ def bara(files, match, unmatch, serve):
                 y2="y2",
                 step_mode="after",
                 source=source,
-                legend_label=legend_label,
                 fill_color=color if hatch_pattern == " " else None,
                 fill_alpha=0.25,
                 hatch_color=color,
@@ -251,7 +254,10 @@ def bara(files, match, unmatch, serve):
                 hatch_pattern=hatch_pattern,
             )
             varea_r.nonselection_glyph = varea_r.glyph
-            fig.legend.background_fill_alpha = 0.5 # make legend more transparent
+            if show_legend:
+                collection_legend_items.setdefault(branch_name, []).append(
+                    LegendItem(label=legend_label, renderers=[step_r, varea_r])
+                )
 
             y_max = max(y_max, np.max(y0 + np.sqrt(y0)))
             prev_file_arr = file_arr
@@ -345,6 +351,11 @@ def bara(files, match, unmatch, serve):
     os.makedirs("capybara-reports", exist_ok=True)
 
     for collection_name, figs in collection_figs.items():
+        if collection_name in collection_legend_items:
+            shared_legend = Legend(items=collection_legend_items[collection_name])
+            shared_legend.background_fill_alpha = 0.5
+            for fig in figs:
+                fig.add_layout(shared_legend)
         item = column(
           mk_dropdown_minimal(collection_name),
           gridplot(figs, ncols=3, width=400, height=300),
