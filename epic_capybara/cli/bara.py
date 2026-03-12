@@ -9,6 +9,8 @@ import uproot
 from bokeh.events import DocumentReady
 from bokeh.io import curdoc
 from bokeh.layouts import gridplot
+from bokeh.models import ColumnDataSource
+from bokeh.models import CustomJSExpr
 from bokeh.models import Range1d
 from bokeh.models import PrintfTickFormatter
 from bokeh.plotting import figure, output_file, save
@@ -16,6 +18,12 @@ from hist import Hist
 from scipy.stats import kstest
 
 from ..util import skip_common_prefix
+
+_MIDPOINT_EXPR_CODE = """
+const y1 = this.data.y1;
+const y2 = this.data.y2;
+return y1.map((v, i) => (v + y2[i]) / 2);
+"""
 
 
 def _is_leaf(obj):
@@ -118,6 +126,7 @@ def bara(files, match, unmatch, serve):
 
     collection_figs = {}
     collection_with_diffs = {}
+    collection_step_exprs = {}
 
     for key in sorted(arr.keys()):
         if any("string" in str(ak.type(a)) for a in arr[key].values()):
@@ -152,8 +161,11 @@ def bara(files, match, unmatch, serve):
             branch_name = key
             leaf_name = key
 
-        fig = figure(x_axis_label=leaf_name, y_axis_label="Entries",
-                     tools="pan,wheel_zoom,reset,save")
+        midpoint_expr = collection_step_exprs.setdefault(
+            branch_name,
+            CustomJSExpr(code=_MIDPOINT_EXPR_CODE),
+        )
+        fig = figure(x_axis_label=leaf_name, y_axis_label="Entries")
         if x_range < 1.:
             fig.xaxis.formatter = PrintfTickFormatter(format="%.2g")
         collection_figs.setdefault(branch_name, []).append(fig)
@@ -207,10 +219,18 @@ def bara(files, match, unmatch, serve):
             ys, edges = h.to_numpy()
             y0 = np.concatenate([ys, [ys[-1]]])
             legend_label=label + (f"\n{100*pvalue:.0f}%CL KS" if pvalue is not None else "")
+            source = ColumnDataSource(
+                {
+                    "x": edges + x_min,
+                    "y1": y0 - np.sqrt(y0),
+                    "y2": y0 + np.sqrt(y0),
+                }
+            )
             step_r = fig.step(
-                x=edges + x_min,
-                y=y0,
+                x="x",
+                y={"expr": midpoint_expr},
                 mode="after",
+                source=source,
                 legend_label=legend_label,
                 line_color=color,
                 line_width=line_width,
@@ -218,10 +238,11 @@ def bara(files, match, unmatch, serve):
             )
             step_r.nonselection_glyph = step_r.glyph
             varea_r = fig.varea_step(
-                x=edges + x_min,
-                y1=y0 - np.sqrt(y0),
-                y2=y0 + np.sqrt(y0),
+                x="x",
+                y1="y1",
+                y2="y2",
                 step_mode="after",
+                source=source,
                 legend_label=legend_label,
                 fill_color=color if hatch_pattern == " " else None,
                 fill_alpha=0.25,
