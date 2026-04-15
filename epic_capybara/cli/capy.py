@@ -2,6 +2,7 @@ import click
 from github import Auth, Github, GithubException
 
 from ..github import download_artifact
+from .rucio import rucio
 
 
 @click.command()
@@ -146,3 +147,4 @@ def capy(**kwargs):
 
 capy.add_command(pr)
 capy.add_command(rev)
+capy.add_command(rucio)
