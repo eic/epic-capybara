@@ -36,6 +36,11 @@ dependencies = [
 ]
 dynamic = ["version"]
 
+[project.optional-dependencies]
+rntuple = [
+  "uproot>=5.7.0",
+]
+
 [project.urls]
 Documentation = "https://github.com/eic/epic-capybara#readme"
 Issues = "https://github.com/eic/epic-capybara/issues"
