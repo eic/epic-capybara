@@ -204,8 +204,9 @@ def bara(files, match, unmatch, serve):
                             ).pvalue
                     else:
                         pvalue = 0
-                    print(key)
-                    print(prev_file_arr, file_arr, f"p = {pvalue:.3f}")
+                    print(key, f"p = {pvalue:.3f}")
+                    print(prev_file_arr)
+                    print(file_arr)
                     collection_with_diffs[branch_name] = min(pvalue, collection_with_diffs.get(branch_name, 1.))
 
             # Figure
