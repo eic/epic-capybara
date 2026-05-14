@@ -1,6 +1,5 @@
 import shutil
 import subprocess
-from github import Auth, Github, GithubException
 from pathlib import Path
 
 import click
@@ -10,6 +9,20 @@ from ..filesystem import hashdir
 from ..util import get_cache_dir
 
 
+def _load_github_dependencies(ctx: click.Context):
+    try:
+        from github import Auth, Github, GithubException
+    except ModuleNotFoundError as e:
+        click.secho(
+            "The `cate` command requires optional GitHub dependencies that are "
+            f"not importable in this Python environment: {e}.",
+            fg="red",
+            err=True,
+        )
+        ctx.exit(1)
+    return Auth, Github, GithubException
+
+
 @click.command()
 @click.option('--token', envvar="GITHUB_TOKEN", required=True, help="GitHub access token (defaults to GITHUB_TOKEN environment variable)")
 @click.option('--owner', help="Owner of the target repository (token owner by default)")
@@ -17,6 +30,7 @@ from ..util import get_cache_dir
 @click.argument('report-dir', type=click.Path(exists=True, file_okay=False, dir_okay=True))
 @click.pass_context
 def cate(ctx: click.Context, owner: str, repo: str, report_dir: str, token: str):
+    Auth, Github, GithubException = _load_github_dependencies(ctx)
     gh = Github(auth=Auth.Token(token))
 
     if owner is not None:
