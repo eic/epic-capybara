@@ -126,6 +126,7 @@ def bara(files, match, unmatch, serve):
 
     collection_figs = {}
     collection_with_diffs = {}
+    collection_matching_count = {}
     collection_step_exprs = {}
 
     for key in sorted(arr.keys()):
@@ -178,9 +179,11 @@ def bara(files, match, unmatch, serve):
           ("blue", 2, "dotted", "."),
         ]
 
+        leaf_min_pvalue = 1.0
         if set(arr[key].keys()) != set(files):
             # not every file has the key
             collection_with_diffs[branch_name] = 0.0
+            leaf_min_pvalue = 0.0
 
         for _file, label, (color, line_width, line_dash, hatch_pattern) in zip(files, labels, vis_params):
             if _file not in arr[key]:
@@ -208,6 +211,7 @@ def bara(files, match, unmatch, serve):
                     print(prev_file_arr)
                     print(file_arr)
                     collection_with_diffs[branch_name] = min(pvalue, collection_with_diffs.get(branch_name, 1.))
+                    leaf_min_pvalue = min(leaf_min_pvalue, pvalue)
 
             # Figure
             h = (
@@ -256,6 +260,9 @@ def bara(files, match, unmatch, serve):
 
             y_max = max(y_max, np.max(y0 + np.sqrt(y0)))
             prev_file_arr = file_arr
+
+        if leaf_min_pvalue == 1.0:
+            collection_matching_count[branch_name] = collection_matching_count.get(branch_name, 0) + 1
 
         x_bounds = (x_min - 0.05 * x_range, x_min + 1.05 * x_range)
         y_bounds = (- 0.05 * y_max, 1.05 * y_max)
@@ -311,7 +318,79 @@ def bara(files, match, unmatch, serve):
                 marker = " (****)"
         options.append((to_filename(collection_name), collection_name + marker))
 
-    from bokeh.models import CustomJS, Select
+    from bokeh.models import CustomJS, Select, DataTable, TableColumn, HTMLTemplateFormatter, NumberFormatter, StringFormatter
+
+    def mk_summary_table():
+        rows = []
+        for collection_name, figs in sorted(
+            collection_figs.items(),
+            key=lambda item: item[0].lstrip("_"),
+        ):
+            if collection_name in collection_with_diffs:
+                pvalue = collection_with_diffs[collection_name]
+                if pvalue > 0.99:
+                    color = "#28a745"  # green
+                elif pvalue > 0.95:
+                    color = "#ffc107"  # yellow
+                elif pvalue > 0.67:
+                    color = "#fd7e14"  # orange
+                else:
+                    color = "#dc3545"  # red
+                pvalue_str = f"{pvalue:.3f}"
+            else:
+                color = "transparent"
+                pvalue_str = ""
+            n_total = len(figs)
+            n_match = collection_matching_count.get(collection_name, 0)
+            n_diff = n_total - n_match
+            rows.append((collection_name, color, pvalue_str, n_match, n_diff, n_total))
+
+        source = ColumnDataSource({
+            "collection": [r[0] for r in rows],
+            "filename":   [to_filename(r[0]) for r in rows],
+            "color":      [r[1] for r in rows],
+            "pvalue":     [r[2] for r in rows],
+            "nmatch":     [r[3] for r in rows],
+            "ndiff":      [r[4] for r in rows],
+            "nplots":     [r[5] for r in rows],
+        })
+        square_style = (
+            'display:inline-block;width:0.9em;height:0.9em;'
+            'margin-right:6px;vertical-align:middle;'
+            'border:1px solid #999;background-color:<%= color %>;'
+        )
+        link_fmt = HTMLTemplateFormatter(
+            template=f'<span style="{square_style}"></span>'
+                     '<a href="#<%= filename %>"><%= value %></a>'
+        )
+        right_str = StringFormatter(text_align="right")
+        right_num = NumberFormatter(text_align="right")
+        columns = [
+            TableColumn(field="collection", title="Collection", formatter=link_fmt, width=500),
+            TableColumn(field="pvalue", title="min KS p-value", formatter=right_str, width=120),
+            TableColumn(field="nmatch", title="# matching", formatter=right_num, width=80),
+            TableColumn(field="ndiff", title="# differing", formatter=right_num, width=80),
+            TableColumn(field="nplots", title="# plots", formatter=right_num, width=80),
+        ]
+        table = DataTable(
+            source=source,
+            columns=columns,
+            width=800,
+            sizing_mode="stretch_height",
+            index_position=None,
+            sortable=True,
+            selectable=True,
+        )
+        source.selected.js_on_change("indices", CustomJS(args={"source": source}, code="""
+          const idx = cb_obj.indices;
+          if (idx.length > 0) {
+            const filename = source.data["filename"][idx[0]];
+            window.location.hash = "#" + filename;
+            fetchAndReplaceBokehDocument(filename);
+          }
+        """))
+        return table
+
     def mk_dropdown(value=""):
         dropdown = Select(title="Select branch (**** < 67% CL, ..., * > 99% CL stat. equiv.):", value=value, options=options)
         dropdown.js_on_change("value", CustomJS(code="""
@@ -319,6 +398,9 @@ def bara(files, match, unmatch, serve):
           if (this.value != "") {
             window.location.hash = "#" + this.value;
             fetchAndReplaceBokehDocument(this.value);
+          } else {
+            // Empty option selected: navigate back to the index page.
+            window.location.hash = "";
           }
         """))
         return dropdown
@@ -335,6 +417,9 @@ def bara(files, match, unmatch, serve):
           if (this.value != "") {
             window.location.hash = "#" + this.value;
             fetchAndReplaceBokehDocument(this.value);
+          } else {
+            // Empty option selected: navigate back to the index page.
+            window.location.hash = "";
           }
         """))
         return dropdown
@@ -387,7 +472,15 @@ def bara(files, match, unmatch, serve):
 
       window.onhashchange = function() {
         var location = window.location.hash.replace(/^#/, "");
-        if ((location != "") && ((typeof current_location === 'undefined') || (current_location != location))) {
+        if (location == "") {
+          // No hash: return to the index page. Since there is no index.json.gz,
+          // just reload the page to get a fresh index.html.
+          if (typeof window.current_location !== 'undefined') {
+            window.location.reload();
+          }
+          return;
+        }
+        if ((typeof current_location === 'undefined') || (current_location != location)) {
           fetchAndReplaceBokehDocument(location);
           window.current_location = location;
         }
@@ -395,7 +488,11 @@ def bara(files, match, unmatch, serve):
       window.onhashchange();
     """))
     output_file(filename="capybara-reports/index.html", title="ePIC capybara report")
-    save(mk_dropdown())
+    save(column(
+        mk_dropdown(),
+        mk_summary_table(),
+        sizing_mode="stretch_height",
+    ))
 
     if serve:
         os.chdir("capybara-reports/")
