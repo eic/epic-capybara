@@ -37,7 +37,7 @@ def download_artifact(workflow, artifact_name, token=None, click=None):
     elif len(zfp.namelist()) == 1:
         zip_filename, = zfp.namelist()
         if click is not None:
-            click.secho(f"Can't locate {artifact_name} in the artifact ZIP archive, using {zip_filename} instead", fg="orange", err=True)
+            click.secho(f"Can't locate {artifact_name} in the artifact ZIP archive, using {zip_filename} instead", fg="yellow", err=True)
 
     if zip_filename is not None:
         # Extract a single file
