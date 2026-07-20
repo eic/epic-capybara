@@ -20,9 +20,22 @@ from scipy.stats import PermutationMethod, anderson_ksamp, kstest
 from ..util import skip_common_prefix
 
 # Cap Anderson-Darling sample size to keep runtime bounded on
-# high-multiplicity collections
+# high-multiplicity collections.
 _AD_MAX_N = 10_000
-_AD_RNG = np.random.default_rng(0)
+
+
+def _ad_rng(key):
+    """Return a deterministic RNG seeded from the leaf key.
+
+    Using a per-leaf seed (rather than a shared module-level RNG) makes each
+    leaf's subsample independent of the number and order of previously
+    processed leaves, so AD p-values stay reproducible when the set of
+    processed collections changes (e.g. under different match/unmatch
+    filters).
+    """
+    import hashlib
+    digest = hashlib.blake2b(key.encode("utf-8"), digest_size=8).digest()
+    return np.random.default_rng(int.from_bytes(digest, "little"))
 
 _MIDPOINT_EXPR_CODE = """
 const y1 = this.data.y1;
@@ -225,11 +238,12 @@ def bara(files, match, unmatch, serve):
                             # AD at N=1e4 already resolves p-values well below
                             # any threshold we colour on, so larger samples buy
                             # no useful sensitivity.
+                            rng = _ad_rng(key)
                             ad_a, ad_b = flat_a, flat_b
                             if len(ad_a) > _AD_MAX_N:
-                                ad_a = _AD_RNG.choice(ad_a, _AD_MAX_N, replace=False)
+                                ad_a = rng.choice(ad_a, _AD_MAX_N, replace=False)
                             if len(ad_b) > _AD_MAX_N:
-                                ad_b = _AD_RNG.choice(ad_b, _AD_MAX_N, replace=False)
+                                ad_b = rng.choice(ad_b, _AD_MAX_N, replace=False)
                             try:
                                 # anderson_ksamp fails if all samples are
                                 # identical or if there are too few distinct
@@ -240,7 +254,10 @@ def bara(files, match, unmatch, serve):
                                     # batch bounds peak memory (permutations
                                     # are otherwise materialized all at once,
                                     # which OOMs on large samples).
-                                    method=PermutationMethod(n_resamples=999, batch=200),
+                                    # Seed the permutation RNG from the same
+                                    # per-key stream used for subsampling so
+                                    # the reported p-value is reproducible.
+                                    method=PermutationMethod(n_resamples=999, batch=200, rng=rng),
                                     variant="midrank",
                                 )
                                 ad_pvalue = float(ad_result.pvalue)
