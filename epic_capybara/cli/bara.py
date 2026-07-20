@@ -15,7 +15,7 @@ from bokeh.models import Range1d
 from bokeh.models import PrintfTickFormatter
 from bokeh.plotting import figure, output_file, save
 from hist import Hist
-from scipy.stats import kstest
+from scipy.stats import PermutationMethod, anderson_ksamp, kstest
 
 from ..util import skip_common_prefix
 
@@ -126,6 +126,8 @@ def bara(files, match, unmatch, serve):
 
     collection_figs = {}
     collection_with_diffs = {}
+    collection_ks_pvalue = {}
+    collection_ad_pvalue = {}
     collection_matching_count = {}
     collection_step_exprs = {}
 
@@ -190,8 +192,10 @@ def bara(files, match, unmatch, serve):
                 continue
             file_arr = arr[key][_file]
 
-            # diff and KS test
+            # diff, KS and Anderson-Darling k-sample tests
             pvalue = None
+            ks_pvalue = None
+            ad_pvalue = None
             if prev_file_arr is not None:
                 if ((ak.num(file_arr, axis=0) != ak.num(prev_file_arr, axis=0))
                    or ak.any(ak.num(file_arr, axis=1)
@@ -200,17 +204,42 @@ def bara(files, match, unmatch, serve):
                              != ak.nan_to_none(prev_file_arr))):
                     if (ak.num(ak.flatten(file_arr, axis=None), axis=0) > 0 and
                         ak.num(ak.flatten(prev_file_arr, axis=None), axis=0) > 0):
-                        # We can only apply the KS test on non-empty arrays
-                        pvalue = kstest(
-                                ak.to_numpy(ak.flatten(file_arr, axis=None)),
-                                ak.to_numpy(ak.flatten(prev_file_arr, axis=None))
-                            ).pvalue
+                        # We can only apply the tests on non-empty arrays
+                        flat_a = ak.to_numpy(ak.flatten(file_arr, axis=None))
+                        flat_b = ak.to_numpy(ak.flatten(prev_file_arr, axis=None))
+                        ks_pvalue = kstest(flat_a, flat_b).pvalue
+                        try:
+                            # anderson_ksamp fails if all samples are identical
+                            # or if there are too few distinct values.
+                            ad_result = anderson_ksamp(
+                                [flat_a, flat_b],
+                                # n_resamples sets p-value resolution; batch
+                                # bounds peak memory (permutations are
+                                # otherwise materialized all at once, which
+                                # OOMs on large samples).
+                                method=PermutationMethod(n_resamples=999, batch=200),
+                                variant="midrank",
+                            )
+                            ad_pvalue = float(ad_result.pvalue)
+                        except (ValueError, TypeError):
+                            ad_pvalue = None
+                        if ad_pvalue is None:
+                            pvalue = ks_pvalue
+                        else:
+                            pvalue = min(ks_pvalue, ad_pvalue)
                     else:
+                        ks_pvalue = 0
+                        ad_pvalue = 0
                         pvalue = 0
-                    print(key, f"p = {pvalue:.3f}")
+                    print(key)
+                    print(f"p_KS = {ks_pvalue:.3f}",
+                          f"p_AD = {ad_pvalue:.3f}" if ad_pvalue is not None else "p_AD = n/a")
                     print(prev_file_arr)
                     print(file_arr)
                     collection_with_diffs[branch_name] = min(pvalue, collection_with_diffs.get(branch_name, 1.))
+                    collection_ks_pvalue[branch_name] = min(ks_pvalue, collection_ks_pvalue.get(branch_name, 1.))
+                    if ad_pvalue is not None:
+                        collection_ad_pvalue[branch_name] = min(ad_pvalue, collection_ad_pvalue.get(branch_name, 1.))
                     leaf_min_pvalue = min(leaf_min_pvalue, pvalue)
 
             # Figure
@@ -223,7 +252,12 @@ def bara(files, match, unmatch, serve):
 
             ys, edges = h.to_numpy()
             y0 = np.concatenate([ys, [ys[-1]]])
-            legend_label=label + (f"\n{100*pvalue:.0f}%CL KS" if pvalue is not None else "")
+            legend_parts = [label]
+            if ks_pvalue is not None:
+                legend_parts.append(f"{100*ks_pvalue:.0f}%CL KS")
+            if ad_pvalue is not None:
+                legend_parts.append(f"{100*ad_pvalue:.0f}%CL AD")
+            legend_label = "\n".join(legend_parts)
             source = ColumnDataSource(
                 {
                     "x": edges + x_min,
@@ -336,23 +370,28 @@ def bara(files, match, unmatch, serve):
                     color = "#fd7e14"  # orange
                 else:
                     color = "#dc3545"  # red
-                pvalue_str = f"{pvalue:.3f}"
+                ks_str = (f"{collection_ks_pvalue[collection_name]:.3f}"
+                          if collection_name in collection_ks_pvalue else "")
+                ad_str = (f"{collection_ad_pvalue[collection_name]:.3f}"
+                          if collection_name in collection_ad_pvalue else "n/a")
             else:
                 color = "transparent"
-                pvalue_str = ""
+                ks_str = ""
+                ad_str = ""
             n_total = len(figs)
             n_match = collection_matching_count.get(collection_name, 0)
             n_diff = n_total - n_match
-            rows.append((collection_name, color, pvalue_str, n_match, n_diff, n_total))
+            rows.append((collection_name, color, ks_str, ad_str, n_match, n_diff, n_total))
 
         source = ColumnDataSource({
             "collection": [r[0] for r in rows],
             "filename":   [to_filename(r[0]) for r in rows],
             "color":      [r[1] for r in rows],
-            "pvalue":     [r[2] for r in rows],
-            "nmatch":     [r[3] for r in rows],
-            "ndiff":      [r[4] for r in rows],
-            "nplots":     [r[5] for r in rows],
+            "ks_pvalue":  [r[2] for r in rows],
+            "ad_pvalue":  [r[3] for r in rows],
+            "nmatch":     [r[4] for r in rows],
+            "ndiff":      [r[5] for r in rows],
+            "nplots":     [r[6] for r in rows],
         })
         square_style = (
             'display:inline-block;width:0.9em;height:0.9em;'
@@ -367,7 +406,8 @@ def bara(files, match, unmatch, serve):
         right_num = NumberFormatter(text_align="right")
         columns = [
             TableColumn(field="collection", title="Collection", formatter=link_fmt, width=500),
-            TableColumn(field="pvalue", title="min KS p-value", formatter=right_str, width=120),
+            TableColumn(field="ks_pvalue", title="min KS p-value", formatter=right_str, width=120),
+            TableColumn(field="ad_pvalue", title="min AD p-value", formatter=right_str, width=120),
             TableColumn(field="nmatch", title="# matching", formatter=right_num, width=80),
             TableColumn(field="ndiff", title="# differing", formatter=right_num, width=80),
             TableColumn(field="nplots", title="# plots", formatter=right_num, width=80),
