@@ -19,6 +19,24 @@ from scipy.stats import PermutationMethod, anderson_ksamp, kstest
 
 from ..util import skip_common_prefix
 
+# Cap Anderson-Darling sample size to keep runtime bounded on
+# high-multiplicity collections.
+_AD_MAX_N = 10_000
+
+
+def _ad_rng(key):
+    """Return a deterministic RNG seeded from the leaf key.
+
+    Using a per-leaf seed (rather than a shared module-level RNG) makes each
+    leaf's subsample independent of the number and order of previously
+    processed leaves, so AD p-values stay reproducible when the set of
+    processed collections changes (e.g. under different match/unmatch
+    filters).
+    """
+    import hashlib
+    digest = hashlib.blake2b(key.encode("utf-8"), digest_size=8).digest()
+    return np.random.default_rng(int.from_bytes(digest, "little"))
+
 _MIDPOINT_EXPR_CODE = """
 const y1 = this.data.y1;
 const y2 = this.data.y2;
@@ -207,22 +225,44 @@ def bara(files, match, unmatch, serve):
                         # We can only apply the tests on non-empty arrays
                         flat_a = ak.to_numpy(ak.flatten(file_arr, axis=None))
                         flat_b = ak.to_numpy(ak.flatten(prev_file_arr, axis=None))
-                        ks_pvalue = kstest(flat_a, flat_b).pvalue
-                        try:
-                            # anderson_ksamp fails if all samples are identical
-                            # or if there are too few distinct values.
-                            ad_result = anderson_ksamp(
-                                [flat_a, flat_b],
-                                # n_resamples sets p-value resolution; batch
-                                # bounds peak memory (permutations are
-                                # otherwise materialized all at once, which
-                                # OOMs on large samples).
-                                method=PermutationMethod(n_resamples=999, batch=200),
-                                variant="midrank",
-                            )
-                            ad_pvalue = float(ad_result.pvalue)
-                        except (ValueError, TypeError):
-                            ad_pvalue = None
+                        # Fast path: identical flattened contents
+                        if (flat_a.shape == flat_b.shape
+                                and np.array_equal(flat_a, flat_b)):
+                            ks_pvalue = 1.0
+                            ad_pvalue = 1.0
+                        else:
+                            ks_pvalue = kstest(flat_a, flat_b).pvalue
+                            # AD cost grows ~linearly with sample size and
+                            # dominates the total runtime for high-multiplicity
+                            # collections. Subsample above _AD_MAX_N per side:
+                            # AD at N=1e4 already resolves p-values well below
+                            # any threshold we colour on, so larger samples buy
+                            # no useful sensitivity.
+                            rng = _ad_rng(key)
+                            ad_a, ad_b = flat_a, flat_b
+                            if len(ad_a) > _AD_MAX_N:
+                                ad_a = rng.choice(ad_a, _AD_MAX_N, replace=False)
+                            if len(ad_b) > _AD_MAX_N:
+                                ad_b = rng.choice(ad_b, _AD_MAX_N, replace=False)
+                            try:
+                                # anderson_ksamp fails if all samples are
+                                # identical or if there are too few distinct
+                                # values.
+                                ad_result = anderson_ksamp(
+                                    [ad_a, ad_b],
+                                    # n_resamples sets p-value resolution;
+                                    # batch bounds peak memory (permutations
+                                    # are otherwise materialized all at once,
+                                    # which OOMs on large samples).
+                                    # Seed the permutation RNG from the same
+                                    # per-key stream used for subsampling so
+                                    # the reported p-value is reproducible.
+                                    method=PermutationMethod(n_resamples=999, batch=200, rng=rng),
+                                    variant="midrank",
+                                )
+                                ad_pvalue = float(ad_result.pvalue)
+                            except (ValueError, TypeError):
+                                ad_pvalue = None
                         if ad_pvalue is None:
                             pvalue = ks_pvalue
                         else:
