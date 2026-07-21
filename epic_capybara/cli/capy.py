@@ -1,3 +1,5 @@
+import sys
+
 import click
 from github import Auth, Github, GithubException
 
@@ -42,6 +44,7 @@ def pr(ctx: click.Context, artifact_name: str, owner: str, pr_number: int, repo:
             repo.get_workflow_runs(),
             label="Loading workflows",
             item_show_func=item_show_func,
+            file=sys.stderr,
     ) as workflows_bar:
         for workflow in workflows_bar:
             # workflow.head_commit.sha is not available, so we take the latest
@@ -101,6 +104,7 @@ def rev(ctx: click.Context, artifact_name: str, owner: str, ref: str, repo: str,
             repo.get_workflow_runs(),
             label="Loading workflows",
             item_show_func=item_show_func,
+            file=sys.stderr,
     ) as workflows_bar:
         for workflow in workflows_bar:
             # workflow.head_commit.sha is not available, so we take the latest
