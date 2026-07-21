@@ -1,3 +1,5 @@
+import sys
+
 import click
 from github import Auth, Github, GithubException
 
@@ -42,6 +44,7 @@ def pr(ctx: click.Context, artifact_name: str, owner: str, pr_number: int, repo:
             repo.get_workflow_runs(),
             label="Loading workflows",
             item_show_func=item_show_func,
+            file=sys.stderr,
     ) as workflows_bar:
         for workflow in workflows_bar:
             # workflow.head_commit.sha is not available, so we take the latest
@@ -69,8 +72,8 @@ def pr(ctx: click.Context, artifact_name: str, owner: str, pr_number: int, repo:
     for message in messages:
         click.secho(**message)
 
-    click.echo(f"PR base workflow: {workflow_base.html_url}")
-    click.echo(f"PR head workflow: {workflow_head.html_url}")
+    click.echo(f"PR base workflow: {workflow_base.html_url}", err=True)
+    click.echo(f"PR head workflow: {workflow_head.html_url}", err=True)
 
     click.echo(download_artifact(workflow_base, artifact_name, token=token, click=click))
     click.echo(download_artifact(workflow_head, artifact_name, token=token, click=click))
@@ -101,6 +104,7 @@ def rev(ctx: click.Context, artifact_name: str, owner: str, ref: str, repo: str,
             repo.get_workflow_runs(),
             label="Loading workflows",
             item_show_func=item_show_func,
+            file=sys.stderr,
     ) as workflows_bar:
         for workflow in workflows_bar:
             # workflow.head_commit.sha is not available, so we take the latest
@@ -120,7 +124,7 @@ def rev(ctx: click.Context, artifact_name: str, owner: str, ref: str, repo: str,
     for message in messages:
         click.secho(**message)
 
-    click.echo(f"PR head workflow: {workflow_head.html_url}")
+    click.echo(f"PR head workflow: {workflow_head.html_url}", err=True)
 
     click.echo(download_artifact(workflow_head, artifact_name, token=token, click=click))
 
