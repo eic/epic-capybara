@@ -153,6 +153,14 @@ def bara(files, match, unmatch, serve):
         if any("string" in str(ak.type(a)) for a in arr[key].values()):
             click.echo(f"String value detected for key \"{key}\". Skipping...")
             continue
+        if any("bool" in str(ak.type(a)) for a in arr[key].values()):
+            click.echo(f"Bool value detected for key \"{key}\". Skipping...")
+            continue
+        if any(a.layout.minmax_depth[0] < 2 for a in arr[key].values()):
+            # Not possible for PODIO, here for general ROOT file support
+            print(f"Skipping non-array branch \"{key}\"")
+            continue
+
         x_min = min(filter(
             lambda v: v is not None,
             map(lambda a: ak.min(ak.mask(a, np.isfinite(a))), arr[key].values())
@@ -361,7 +369,7 @@ def bara(files, match, unmatch, serve):
             click.secho(f"overflow while calculating y bounds for \"{key}\"", fg="red", err=True)
 
     def to_filename(branch_name):
-        return branch_name.replace("#", "__pound__")
+        return branch_name.replace("#", "__pound__").replace("/", "__underscore__")
 
     def option_key(item):
         collection_name, figs = item
