@@ -530,6 +530,52 @@ def bara(files, match, unmatch, serve):
     curdoc().js_on_event(DocumentReady, CustomJS(args={"all_options": options}, code="""
       window._bokehSelectOptions = all_options;
 
+      // Save the active DataTable sort column and direction to sessionStorage so it
+      // can be restored after the page reloads when the user returns to the index.
+      // Only runs while on the index page (current_location not yet set).
+      function saveSortState() {
+        if (typeof window.current_location !== 'undefined') return;
+        var sortedHeader = document.querySelector('.slick-header-column-sorted');
+        if (sortedHeader) {
+          var indicator = sortedHeader.querySelector('.slick-sort-indicator');
+          var ascending = !indicator || indicator.classList.contains('slick-sort-indicator-asc');
+          var titleEl = sortedHeader.querySelector('.slick-column-name');
+          var title = titleEl ? titleEl.textContent : null;
+          if (title) {
+            sessionStorage.setItem('capybara_sort', JSON.stringify({title: title, ascending: ascending}));
+            return;
+          }
+        }
+        sessionStorage.removeItem('capybara_sort');
+      }
+
+      // After a page reload, wait for Bokeh/SlickGrid to render the table headers,
+      // then re-apply the sort column and direction saved by saveSortState().
+      function restoreSortStateWhenReady() {
+        var saved = sessionStorage.getItem('capybara_sort');
+        if (!saved) return;
+        var state;
+        try { state = JSON.parse(saved); } catch(e) { return; }
+        sessionStorage.removeItem('capybara_sort');
+
+        var observer = new MutationObserver(function(mutations, obs) {
+          var headers = document.querySelectorAll('.slick-header-column');
+          if (!headers.length) return;
+          for (var i = 0; i < headers.length; i++) {
+            var titleEl = headers[i].querySelector('.slick-column-name');
+            if (titleEl && titleEl.textContent === state.title) {
+              obs.disconnect();
+              headers[i].click();          // first click: ascending
+              if (!state.ascending) {
+                headers[i].click();        // second click: descending
+              }
+              return;
+            }
+          }
+        });
+        observer.observe(document.body, {childList: true, subtree: true});
+      }
+
       function fetchAndReplaceBokehDocument(location) {
         fetch(location + '.json.gz')
           .then(async function(response) {
@@ -560,6 +606,7 @@ def bara(files, match, unmatch, serve):
 
       window.onhashchange = function() {
         var location = window.location.hash.replace(/^#/, "");
+        saveSortState();
         if (location == "") {
           // No hash: return to the index page. Since there is no index.json.gz,
           // just reload the page to get a fresh index.html.
@@ -574,6 +621,7 @@ def bara(files, match, unmatch, serve):
         }
       }
       window.onhashchange();
+      restoreSortStateWhenReady();
     """))
     output_file(filename="capybara-reports/index.html", title="ePIC capybara report")
     save(column(
