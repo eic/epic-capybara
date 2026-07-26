@@ -400,9 +400,16 @@ def bara(files, match, unmatch, serve):
                 marker = " (****)"
         options.append((to_filename(collection_name), collection_name + marker))
 
-    from bokeh.models import CustomJS, Select, DataTable, TableColumn, HTMLTemplateFormatter, NumberFormatter, StringFormatter
+    from bokeh.models import CustomJS, Select, DataTable, TableColumn, HTMLTemplateFormatter, NumberFormatter, StringFormatter, TextInput, IndexFilter, CDSView
 
-    def mk_summary_table():
+    def mk_search_input():
+        return TextInput(
+            placeholder="Filter collections (regex or substring)",
+            title="Search:",
+            width=500,
+        )
+
+    def mk_summary_table(text_input=None, dropdown=None):
         rows = []
         for collection_name, figs in sorted(
             collection_figs.items(),
@@ -460,8 +467,11 @@ def bara(files, match, unmatch, serve):
             TableColumn(field="ndiff", title="# differing", formatter=right_num, width=80),
             TableColumn(field="nplots", title="# plots", formatter=right_num, width=80),
         ]
+        index_filter = IndexFilter(indices=list(range(len(rows))))
+        view = CDSView(filter=index_filter)
         table = DataTable(
             source=source,
+            view=view,
             columns=columns,
             width=800,
             sizing_mode="stretch_height",
@@ -477,6 +487,44 @@ def bara(files, match, unmatch, serve):
             fetchAndReplaceBokehDocument(filename);
           }
         """))
+        if text_input is not None:
+            cb_args = {"source": source, "index_filter": index_filter, "all_options": options}
+            if dropdown is not None:
+                cb_args["dropdown"] = dropdown
+            text_input.js_on_change("value", CustomJS(args=cb_args, code="""
+              const query = cb_obj.value.trim();
+              const names = source.data["collection"];
+              const n = names.length;
+
+              let re;
+              if (query) {
+                try {
+                  re = new RegExp(query, 'i');
+                } catch(e) {
+                  re = null;
+                }
+              }
+
+              const lower_query = query ? query.toLowerCase() : "";
+              const indices = [];
+              for (let i = 0; i < n; i++) {
+                if (!query || (re ? re.test(names[i]) : names[i].toLowerCase().includes(lower_query))) {
+                  indices.push(i);
+                }
+              }
+              index_filter.indices = indices;
+              source.change.emit();
+
+              // Filter the dropdown options to match the same query.
+              const base_options = window._bokehSelectOptions || all_options;
+              const filtered_options = base_options.filter(
+                ([val, label]) => !val || !query ||
+                  (re ? re.test(label) : label.toLowerCase().includes(lower_query))
+              );
+              if (typeof dropdown !== 'undefined' && dropdown !== null) {
+                dropdown.options = filtered_options;
+              }
+            """))
         return table
 
     def mk_dropdown(value=""):
@@ -576,9 +624,12 @@ def bara(files, match, unmatch, serve):
       window.onhashchange();
     """))
     output_file(filename="capybara-reports/index.html", title="ePIC capybara report")
+    search_input = mk_search_input()
+    dropdown = mk_dropdown()
     save(column(
-        mk_dropdown(),
-        mk_summary_table(),
+        search_input,
+        dropdown,
+        mk_summary_table(text_input=search_input, dropdown=dropdown),
         sizing_mode="stretch_height",
     ))
 
