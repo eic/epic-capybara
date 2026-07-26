@@ -401,6 +401,26 @@ def bara(files, match, unmatch, serve):
         options.append((to_filename(collection_name), collection_name + marker))
 
     from bokeh.models import CustomJS, Select, DataTable, TableColumn, HTMLTemplateFormatter, NumberFormatter, StringFormatter
+    from bokeh.models.comparisons import CustomJSCompare
+
+    _ks_sorter = CustomJSCompare(code="""
+        if (x === '' && y === '') return 0;
+        if (x === '') return 1;
+        if (y === '') return -1;
+        const nx = parseFloat(x), ny = parseFloat(y);
+        return nx < ny ? -1 : nx > ny ? 1 : 0;
+    """)
+
+    _ad_sorter = CustomJSCompare(code="""
+        if (x === '' && y === '') return 0;
+        if (x === '') return 1;
+        if (y === '') return -1;
+        if (x === 'n/a' && y === 'n/a') return 0;
+        if (x === 'n/a') return 1;
+        if (y === 'n/a') return -1;
+        const nx = parseFloat(x), ny = parseFloat(y);
+        return nx < ny ? -1 : nx > ny ? 1 : 0;
+    """)
 
     def mk_summary_table():
         rows = []
@@ -454,8 +474,8 @@ def bara(files, match, unmatch, serve):
         right_num = NumberFormatter(text_align="right")
         columns = [
             TableColumn(field="collection", title="Collection", formatter=link_fmt, width=500),
-            TableColumn(field="ks_pvalue", title="min KS p-value", formatter=right_str, width=120),
-            TableColumn(field="ad_pvalue", title="min AD p-value", formatter=right_str, width=120),
+            TableColumn(field="ks_pvalue", title="min KS p-value", formatter=right_str, width=120, sorter=_ks_sorter),
+            TableColumn(field="ad_pvalue", title="min AD p-value", formatter=right_str, width=120, sorter=_ad_sorter),
             TableColumn(field="nmatch", title="# matching", formatter=right_num, width=80),
             TableColumn(field="ndiff", title="# differing", formatter=right_num, width=80),
             TableColumn(field="nplots", title="# plots", formatter=right_num, width=80),
