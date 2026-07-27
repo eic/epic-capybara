@@ -409,7 +409,7 @@ def bara(files, match, unmatch, serve):
             width=500,
         )
 
-    def mk_summary_table(text_input=None, dropdown=None):
+    def mk_summary_table(text_input=None):
         rows = []
         for collection_name, figs in sorted(
             collection_figs.items(),
@@ -489,8 +489,6 @@ def bara(files, match, unmatch, serve):
         """))
         if text_input is not None:
             cb_args = {"source": source, "index_filter": index_filter, "view": view, "all_options": options}
-            if dropdown is not None:
-                cb_args["dropdown"] = dropdown
             text_input.js_on_change("value_input", CustomJS(args=cb_args, code="""
               const query = cb_obj.value.trim();
 
@@ -519,16 +517,6 @@ def bara(files, match, unmatch, serve):
               index_filter.indices = indices;
               // Reassign view.filters to ensure DataTable re-applies the filter.
               view.filters = [index_filter];
-
-              // Filter the dropdown options to match the same query.
-              const base_options = window._bokehSelectOptions || all_options;
-              const filtered_options = base_options.filter(
-                ([val, label]) => !val || !query ||
-                  (re ? re.test(label) : label.toLowerCase().includes(lower_query))
-              );
-              if (typeof dropdown !== 'undefined' && dropdown !== null) {
-                dropdown.options = filtered_options;
-              }
             """))
         return table
 
@@ -634,7 +622,7 @@ def bara(files, match, unmatch, serve):
     save(column(
         dropdown,
         search_input,
-        mk_summary_table(text_input=search_input, dropdown=dropdown),
+        mk_summary_table(text_input=search_input),
         sizing_mode="stretch_height",
     ))
 
