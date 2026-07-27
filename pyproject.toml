@@ -26,7 +26,7 @@ classifiers = [
 ]
 dependencies = [
   "awkward",
-  "bokeh>=3.0.0",
+  "bokeh>=3.6.0",
   "click",
   "hist",
   "PyGithub",
