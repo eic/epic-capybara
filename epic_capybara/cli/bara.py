@@ -403,6 +403,8 @@ def bara(files, match, unmatch, serve):
     from bokeh.models import CustomJS, Select, DataTable, TableColumn, HTMLTemplateFormatter, NumberFormatter, StringFormatter
     from bokeh.models.comparisons import CustomJSCompare
 
+    # BokehJS creates the comparator as new Function("x", "y", ..., code),
+    # so the cell values are available as `x` and `y` in the snippet.
     _ks_sorter = CustomJSCompare(code="""
         if (x === '' && y === '') return 0;
         if (x === '') return 1;
