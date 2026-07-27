@@ -488,11 +488,15 @@ def bara(files, match, unmatch, serve):
           }
         """))
         if text_input is not None:
-            cb_args = {"source": source, "index_filter": index_filter, "all_options": options}
+            cb_args = {"source": source, "index_filter": index_filter, "view": view, "all_options": options}
             if dropdown is not None:
                 cb_args["dropdown"] = dropdown
-            text_input.js_on_change("value", CustomJS(args=cb_args, code="""
+            text_input.js_on_change("value_input", CustomJS(args=cb_args, code="""
               const query = cb_obj.value.trim();
+
+              // Only filter once the query is at least 2 chars (or cleared entirely).
+              if (query.length > 0 && query.length < 2) return;
+
               const names = source.data["collection"];
               const n = names.length;
 
@@ -513,7 +517,8 @@ def bara(files, match, unmatch, serve):
                 }
               }
               index_filter.indices = indices;
-              source.change.emit();
+              // Reassign view.filters to ensure DataTable re-applies the filter.
+              view.filters = [index_filter];
 
               // Filter the dropdown options to match the same query.
               const base_options = window._bokehSelectOptions || all_options;
@@ -627,8 +632,8 @@ def bara(files, match, unmatch, serve):
     search_input = mk_search_input()
     dropdown = mk_dropdown()
     save(column(
-        search_input,
         dropdown,
+        search_input,
         mk_summary_table(text_input=search_input, dropdown=dropdown),
         sizing_mode="stretch_height",
     ))
