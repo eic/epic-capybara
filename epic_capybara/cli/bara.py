@@ -540,9 +540,11 @@ def bara(files, match, unmatch, serve):
           var indicator = sortedHeader.querySelector('.slick-sort-indicator');
           var ascending = !indicator || indicator.classList.contains('slick-sort-indicator-asc');
           var titleEl = sortedHeader.querySelector('.slick-column-name');
-          var title = titleEl ? titleEl.textContent : null;
+          var title = titleEl ? titleEl.textContent.trim() : null;
           if (title) {
-            sessionStorage.setItem('capybara_sort', JSON.stringify({title: title, ascending: ascending}));
+            try {
+              sessionStorage.setItem('capybara_sort', JSON.stringify({title: title, ascending: ascending}));
+            } catch(e) {}
             return;
           }
         }
@@ -555,16 +557,20 @@ def bara(files, match, unmatch, serve):
         var saved = sessionStorage.getItem('capybara_sort');
         if (!saved) return;
         var state;
-        try { state = JSON.parse(saved); } catch(e) { return; }
+        try { state = JSON.parse(saved); } catch(e) {
+          sessionStorage.removeItem('capybara_sort');
+          return;
+        }
         sessionStorage.removeItem('capybara_sort');
 
         var observer = new MutationObserver(function(mutations, obs) {
           var headers = document.querySelectorAll('.slick-header-column');
           if (!headers.length) return;
+          // Headers are present; disconnect regardless of whether we find a match.
+          obs.disconnect();
           for (var i = 0; i < headers.length; i++) {
             var titleEl = headers[i].querySelector('.slick-column-name');
-            if (titleEl && titleEl.textContent === state.title) {
-              obs.disconnect();
+            if (titleEl && titleEl.textContent.trim() === state.title) {
               headers[i].click();          // first click: ascending
               if (!state.ascending) {
                 headers[i].click();        // second click: descending
@@ -620,8 +626,8 @@ def bara(files, match, unmatch, serve):
           window.current_location = location;
         }
       }
-      window.onhashchange();
       restoreSortStateWhenReady();
+      window.onhashchange();
     """))
     output_file(filename="capybara-reports/index.html", title="ePIC capybara report")
     save(column(
