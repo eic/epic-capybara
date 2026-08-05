@@ -101,7 +101,7 @@ jobs:
         workflow_conclusion: "completed"
         if_no_artifact_found: ignore
     - name: Download capybara artifact (this PR)
-      uses: actions/download-artifact@v4
+      uses: actions/download-artifact@v8
       if: github.event.pull_request.number == matrix.pr
       with:
         name: capybara-report
@@ -130,7 +130,7 @@ jobs:
         workflow_conclusion: "completed"
         if_no_artifact_found: ignore
     - name: Download capybara artifact (on main)
-      uses: actions/download-artifact@v4
+      uses: actions/download-artifact@v8
       if: github.ref_name == 'main'
       with:
         name: capybara-report
@@ -164,7 +164,7 @@ jobs:
     if: always() && !cancelled() && !failure()
     steps:
     - name: Download artifacts for pages
-      uses: actions/download-artifact@v4
+      uses: actions/download-artifact@v8
       with:
         path: artifacts/
     - name: Assemble site
@@ -240,7 +240,7 @@ jobs:
         body-includes: Capybara summary
     - name: Fetch capybara summary
       if: ${{ github.event_name == 'pull_request' }}
-      uses: actions/download-artifact@v4
+      uses: actions/download-artifact@v8
       with:
         name: capybara_${{ github.event.pull_request.number }}.md
     - name: Create or update capybara comment
