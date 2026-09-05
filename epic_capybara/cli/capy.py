@@ -1,9 +1,21 @@
 import sys
 
 import click
-from github import Auth, Github, GithubException
 
-from ..github import download_artifact
+
+def _load_github_dependencies(ctx: click.Context):
+    try:
+        from github import Auth, Github, GithubException
+        from ..github import download_artifact
+    except ModuleNotFoundError as e:
+        click.secho(
+            "The `capy` commands require optional GitHub dependencies that are "
+            f"not importable in this Python environment: {e}.",
+            fg="red",
+            err=True,
+        )
+        ctx.exit(1)
+    return Auth, Github, GithubException, download_artifact
 
 
 @click.command()
@@ -14,6 +26,7 @@ from ..github import download_artifact
 @click.argument('pr_number', type=int)
 @click.pass_context
 def pr(ctx: click.Context, artifact_name: str, owner: str, pr_number: int, repo: str, token: str):
+    Auth, Github, GithubException, download_artifact = _load_github_dependencies(ctx)
     gh = Github(auth=Auth.Token(token))
     repo = gh.get_user(owner).get_repo(repo)
 
@@ -87,6 +100,7 @@ def pr(ctx: click.Context, artifact_name: str, owner: str, pr_number: int, repo:
 @click.argument('ref', type=str)
 @click.pass_context
 def rev(ctx: click.Context, artifact_name: str, owner: str, ref: str, repo: str, token: str):
+    Auth, Github, GithubException, download_artifact = _load_github_dependencies(ctx)
     gh = Github(auth=Auth.Token(token))
     repo = gh.get_user(owner).get_repo(repo)
 
