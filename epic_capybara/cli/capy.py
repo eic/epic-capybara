@@ -140,7 +140,7 @@ class ForwardGroup(click.Group):
         return cmd_name, cmd, args
 
 @click.group(cls=ForwardGroup, context_settings={'help_option_names': ['-h', '--help']})
-@click.option('--artifact-name', default="rec_dis_18x275_minQ2=1000_craterlake_18x275.edm4eic.root")
+@click.option('--artifact-name', default="rec_dis_18x275_minQ2=100_craterlake_18x275.edm4eic.root")
 @click.option('--token', envvar="GITHUB_TOKEN", required=True, help="GitHub access token (defaults to GITHUB_TOKEN environment variable)")
 @click.option('--owner', default="eic", help="Owner of the target repository")
 @click.option('--repo', default="EICrecon", help="Name of the target repository")
