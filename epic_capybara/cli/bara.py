@@ -17,7 +17,7 @@ from bokeh.plotting import figure, output_file, save
 from hist import Hist
 from scipy.stats import PermutationMethod, anderson_ksamp, kstest
 
-from ..util import skip_common_prefix
+from ..util import integer_axis_range, skip_common_prefix
 
 # Cap Anderson-Darling sample size to keep runtime bounded on
 # high-multiplicity collections.
@@ -167,17 +167,21 @@ def bara(files, match, unmatch, serve):
         ), default=None)
         if x_min is None:
             continue
-        x_range = max(filter(
-            lambda v: v is not None,
-            map(lambda a: ak.max(ak.mask(a - x_min, np.isfinite(a))), arr[key].values())
-        ), default=None)
         nbins = 10
 
         if (any("* uint" in str(ak.type(a)) for a in arr[key].values())
            or any("* int" in str(ak.type(a)) for a in arr[key].values())):
-            x_range = x_range + 1
-            nbins = int(min(100, np.ceil(x_range)))
+            x_max = max(filter(
+                lambda v: v is not None,
+                map(lambda a: ak.max(ak.mask(a, np.isfinite(a))), arr[key].values())
+            ), default=None)
+            x_range = integer_axis_range(x_min, x_max)
+            nbins = int(min(100, x_range))
         else:
+            x_range = max(filter(
+                lambda v: v is not None,
+                map(lambda a: ak.max(ak.mask(a - x_min, np.isfinite(a))), arr[key].values())
+            ), default=None)
             x_range = x_range * 1.1
 
         if x_range == 0:
