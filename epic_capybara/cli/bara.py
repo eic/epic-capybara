@@ -495,6 +495,7 @@ def bara(files, match, unmatch, serve):
             index_position=None,
             sortable=True,
             selectable=True,
+            name="summary_table",
         )
         source.selected.js_on_change("indices", CustomJS(args={"source": source}, code="""
           const idx = cb_obj.indices;
@@ -598,11 +599,104 @@ def bara(files, match, unmatch, serve):
           });
       }
 
+      // The hash encodes both the current page and the index table's sort state
+      // as "#<filename>?sort=<field>:<asc|desc>;...". Keeping the sort in the
+      // hash lets it survive the full-page reload that happens when navigating
+      // back to the (regenerated) index page.
+      function parseHash() {
+        var raw = window.location.hash.replace(/^#/, "");
+        var qi = raw.indexOf("?");
+        if (qi < 0) {
+          return { location: raw, query: "" };
+        }
+        return { location: raw.slice(0, qi), query: raw.slice(qi + 1) };
+      }
+
+      function parseSort(query) {
+        var s = new URLSearchParams(query).get("sort");
+        if (!s) {
+          return [];
+        }
+        return s.split(";").map(function(tok) {
+          var parts = tok.split(":");
+          return { field: parts[0], sortAsc: parts[1] !== "desc" };
+        }).filter(function(c) { return c.field; });
+      }
+
+      function encodeSort(cols) {
+        if (!cols || cols.length === 0) {
+          return "";
+        }
+        return "sort=" + cols.map(function(c) {
+          return c.field + ":" + (c.sortAsc ? "asc" : "desc");
+        }).join(";");
+      }
+
+      function getSummaryTableView() {
+        try {
+          return Bokeh.index.query_one(function(v) {
+            return v.model && v.model.name === "summary_table" && v.grid != null;
+          });
+        } catch (e) {
+          return null;
+        }
+      }
+
+      function applySortToTable(cols, attempt) {
+        attempt = attempt || 0;
+        var view = getSummaryTableView();
+        if (view == null) {
+          if (attempt < 40) {
+            setTimeout(function() { applySortToTable(cols, attempt + 1); }, 50);
+          }
+          return;
+        }
+        var byField = {};
+        view.grid.getColumns().forEach(function(gc) { byField[gc.field] = gc; });
+        var slickSort = [], dataSort = [];
+        cols.forEach(function(c) {
+          var gc = byField[c.field];
+          if (gc) {
+            slickSort.push({ columnId: gc.id, sortAsc: c.sortAsc });
+            dataSort.push({ sortCol: gc, sortAsc: c.sortAsc });
+          }
+        });
+        view.grid.setSortColumns(slickSort);
+        view.data.sort(dataSort);
+        view.grid.invalidate();
+        view.grid.render();
+        view.model.update_sort_columns(dataSort);
+      }
+
+      function setupSortPersistence(attempt) {
+        attempt = attempt || 0;
+        var view = getSummaryTableView();
+        if (view == null) {
+          if (attempt < 40) {
+            setTimeout(function() { setupSortPersistence(attempt + 1); }, 50);
+          }
+          return;
+        }
+        var initial = parseSort(parseHash().query);
+        if (initial.length > 0) {
+          applySortToTable(initial);
+        }
+        view.grid.onSort.subscribe(function(_event, args) {
+          var cols = (args.sortCols || []).map(function(sc) {
+            return { field: sc.sortCol.field, sortAsc: sc.sortAsc };
+          });
+          var loc = parseHash().location;
+          var sortStr = encodeSort(cols);
+          history.replaceState(null, "", "#" + loc + (sortStr ? "?" + sortStr : ""));
+        });
+      }
+
       window.onhashchange = function() {
-        var location = window.location.hash.replace(/^#/, "");
+        var location = parseHash().location;
         if (location == "") {
-          // No hash: return to the index page. Since there is no index.json.gz,
-          // just reload the page to get a fresh index.html.
+          // No page in the hash: return to the index page. Since there is no
+          // index.json.gz, just reload the page to get a fresh index.html (the
+          // sort is restored from the hash by setupSortPersistence).
           if (typeof window.current_location !== 'undefined') {
             window.location.reload();
           }
@@ -614,6 +708,7 @@ def bara(files, match, unmatch, serve):
         }
       }
       window.onhashchange();
+      setupSortPersistence();
     """))
     output_file(filename="capybara-reports/index.html", title="ePIC capybara report")
     save(column(
