@@ -495,6 +495,12 @@ def bara(files, match, unmatch, serve):
         source.selected.js_on_change("indices", CustomJS(args={"source": source}, code="""
           const idx = cb_obj.indices;
           if (idx.length > 0) {
+            // Meta/ctrl/shift-click is meant to open the row's link in a new
+            // tab; don't also navigate this tab via the row-selection handler.
+            if (window._lastClickModified) {
+              source.selected.indices = [];
+              return;
+            }
             const filename = source.data["filename"][idx[0]];
             window.location.hash = "#" + filename;
             fetchAndReplaceBokehDocument(filename);
@@ -552,6 +558,13 @@ def bara(files, match, unmatch, serve):
 
     curdoc().js_on_event(DocumentReady, CustomJS(args={"all_options": options}, code="""
       window._bokehSelectOptions = all_options;
+
+      // Record whether a modifier key was held for the most recent click so the
+      // table row-selection handler can tell a plain click (navigate this tab)
+      // from a meta/ctrl/shift-click (open the link in a new tab only).
+      document.addEventListener('mousedown', function(e) {
+        window._lastClickModified = e.metaKey || e.ctrlKey || e.shiftKey;
+      }, true);
 
       function fetchAndReplaceBokehDocument(location) {
         fetch(location + '.json.gz')
