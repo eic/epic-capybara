@@ -627,9 +627,24 @@ def bara(files, match, unmatch, serve):
         if (!cols || cols.length === 0) {
           return "";
         }
-        return "sort=" + cols.map(function(c) {
+        return cols.map(function(c) {
           return c.field + ":" + (c.sortAsc ? "asc" : "desc");
         }).join(";");
+      }
+
+      // Set or clear a single parameter of the hash query, keeping the current
+      // page and the other parameters intact. Uses replaceState so that
+      // re-sorting/scrolling does not pile up history entries.
+      function updateHashParam(key, value) {
+        var h = parseHash();
+        var params = new URLSearchParams(h.query);
+        if (value === null || value === "") {
+          params.delete(key);
+        } else {
+          params.set(key, value);
+        }
+        var q = params.toString();
+        history.replaceState(null, "", "#" + h.location + (q ? "?" + q : ""));
       }
 
       function getSummaryTableView() {
@@ -677,7 +692,8 @@ def bara(files, match, unmatch, serve):
           }
           return;
         }
-        var initial = parseSort(parseHash().query);
+        var query = parseHash().query;
+        var initial = parseSort(query);
         if (initial.length > 0) {
           applySortToTable(initial);
         }
@@ -685,9 +701,33 @@ def bara(files, match, unmatch, serve):
           var cols = (args.sortCols || []).map(function(sc) {
             return { field: sc.sortCol.field, sortAsc: sc.sortAsc };
           });
-          var loc = parseHash().location;
-          var sortStr = encodeSort(cols);
-          history.replaceState(null, "", "#" + loc + (sortStr ? "?" + sortStr : ""));
+          updateHashParam("sort", encodeSort(cols) || null);
+        });
+
+        // The vertical scroll position lives in the SlickGrid viewport, which is
+        // recreated (and reset) by the full-page reload on back navigation.
+        // Persist it in the hash too so it survives the round trip.
+        function viewport() {
+          return view.shadow_el ? view.shadow_el.querySelector(".slick-viewport") : null;
+        }
+        var savedScroll = parseInt(new URLSearchParams(query).get("scroll") || "0", 10);
+        if (savedScroll > 0) {
+          setTimeout(function() {
+            var vp = viewport();
+            if (vp) { vp.scrollTop = savedScroll; }
+          }, 150);
+        }
+        var scrollTimer = null;
+        view.grid.onScroll.subscribe(function() {
+          if (scrollTimer) { clearTimeout(scrollTimer); }
+          scrollTimer = setTimeout(function() {
+            // Guard against a late-firing timer writing to a collection page's
+            // hash if the user navigated away right after scrolling.
+            if (parseHash().location !== "") { return; }
+            var vp = viewport();
+            var y = vp ? Math.round(vp.scrollTop) : 0;
+            updateHashParam("scroll", y > 0 ? String(y) : null);
+          }, 150);
         });
       }
 
