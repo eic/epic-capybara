@@ -339,6 +339,7 @@ def bara(files, match, unmatch, serve):
             )
             varea_r.nonselection_glyph = varea_r.glyph
             fig.legend.background_fill_alpha = 0.5 # make legend more transparent
+            fig.legend.location = "top_left" # left-align so glyph markers stay inside the canvas
 
             y_max = max(y_max, np.max(y0 + np.sqrt(y0)))
             prev_file_arr = file_arr
